@@ -1,3 +1,9 @@
 new_york_calculate.egg-info
 build
 dist
+target
+bin
+lib
+.pytest_cache
+new_york_calculate/new_york_calculate.cpython-39-darwin.so
+__pycache__

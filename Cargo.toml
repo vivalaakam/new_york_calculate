@@ -1,0 +1,17 @@
+[package]
+name = "new_york_calculate"
+version = "0.0.4"
+authors = ["Andrey Makarov <viva.la.akam@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rayon = "1.0"
+tokio = { version = "1.8", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+pyo3 = { version = "0.14", features = ["extension-module"] }
+
+[lib]
+name = "new_york_calculate"
+crate-type = ["cdylib"]

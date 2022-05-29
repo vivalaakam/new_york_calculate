@@ -14,33 +14,30 @@ def calculate(candles, results, initial_balance=3000, stake=10, gain=1.0, wait=0
 
     min_balance = initial_balance
 
-    last_order = None
-
     for candle in candles:
         min_balance = min(min_balance, balance)
         if candle[0] in results and results[candle[0]] == 1 and balance > stake:
-            if last_order is None or candle[0] - last_order > wait:
-                curr_stake = floor_to_nearest(stake / candle[1], step_lot)
+            curr_stake = floor_to_nearest(stake / candle[1], step_lot)
 
-                order_sum = curr_stake * candle[1]
+            order_sum = curr_stake * candle[1]
 
-                balance -= order_sum
+            balance -= order_sum
 
-                # commission
-                balance -= order_sum * 0.001
+            # commission
+            balance -= order_sum * 0.001
 
-                opened_orders.append({
-                    'startTime': candle[0],
-                    'endTime': 0,
-                    'buyPrice': candle[1],
-                    'sellPrice': ceil_to_nearest(candle[1] * inner_gain, step_price),
-                    'qty': curr_stake,
-                    'commission': order_sum * 0.001,
-                })
+            opened_orders.append({
+                'startTime': candle[0],
+                'endTime': 0,
+                'buyPrice': candle[1],
+                'sellPrice': ceil_to_nearest(candle[1] * inner_gain, step_price),
+                'qty': curr_stake,
+                'commission': order_sum * 0.001,
+            })
+
+            # print("order create: {} {} {} {}".format(candle[0], curr_stake, order_sum, balance))
 
         for order in reversed(opened_orders):
-            last_order = None
-
             if order['sellPrice'] < candle[2]:
                 order_sum = order['sellPrice'] * order['qty']
 
@@ -57,9 +54,9 @@ def calculate(candles, results, initial_balance=3000, stake=10, gain=1.0, wait=0
 
                 executed_orders.append(order)
                 opened_orders.remove(order)
-            else:
-                if last_order is None or last_order < order['startTime']:
-                    last_order = order['startTime']
+
+                # print("order close: {} {} {}".format(candle[0], balance, wallet))
+
 
     base_count = 0
     base_sum = 0

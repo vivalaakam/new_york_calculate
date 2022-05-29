@@ -17,7 +17,7 @@ def calculate_actors(candles, actors, initial_balance=3000, stake=10, gain=1.0, 
     min_balance = [initial_balance for i in range(len(actors))]
 
     for candle in candles:
-        min_balance = np.min(min_balance, balance)
+        min_balance = np.minimum(min_balance, balance)
 
         has_orders = False
 
