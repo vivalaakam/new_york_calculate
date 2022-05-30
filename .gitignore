@@ -5,5 +5,5 @@ target
 bin
 lib
 .pytest_cache
-new_york_calculate/new_york_calculate.*.so
+new_york_calculate.*.so
 __pycache__
