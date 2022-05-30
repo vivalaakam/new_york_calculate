@@ -1,5 +1,5 @@
 [package]
-name = "new_york_calculate_core"
+name = "new_york_calculate"
 version = "0.0.4"
 authors = ["Andrey Makarov <viva.la.akam@gmail.com>"]
 edition = "2018"
@@ -8,6 +8,14 @@ edition = "2018"
 
 [dependencies]
 log = "0.4"
+rayon = "1.5"
+pyo3 = { version = "0.14", features = ["extension-module"] }
+
 
 [lib]
-name = "new_york_calculate_core"
+name = "new_york_calculate"
+crate-type = ["cdylib"]
+
+[dependencies.new_york_calculate_core]
+version = "*"
+path = "../"

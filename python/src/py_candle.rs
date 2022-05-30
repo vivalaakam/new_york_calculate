@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList};
+use pyo3::types::PyList;
 
-use crate::candle::Candle;
+use new_york_calculate_core::Candle;
 
 #[pyclass]
 pub struct PyCandle {

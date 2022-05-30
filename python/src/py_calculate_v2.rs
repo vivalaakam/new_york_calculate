@@ -1,9 +1,13 @@
-use crate::candle::Candle;
-use crate::order::Order;
-use crate::utils::{ceil_to_nearest, floor_to_nearest};
+use new_york_calculate_core::Order;
+use new_york_calculate_core::utils::{ceil_to_nearest, floor_to_nearest};
+use pyo3::prelude::*;
+use pyo3::types::PyList;
 
-pub struct Calculate {
-    candles: Vec<Candle>,
+use crate::py_candle::PyCandle;
+
+#[pyclass]
+pub struct PyCalculateV2 {
+    candles: Vec<PyCandle>,
     initial_balance: f64,
     stake: f64,
     gain: f64,
@@ -13,16 +17,24 @@ pub struct Calculate {
     interval: u64,
 }
 
-impl Calculate {
-    pub fn new(
-        candles: Vec<Candle>,
+#[pymethods]
+impl PyCalculateV2 {
+    #[new]
+    fn __new__(
+        candles: &PyList,
         initial_balance: Option<f64>,
         stake: Option<f64>,
         gain: Option<f64>,
         profit: Option<f64>,
         interval: Option<u64>,
     ) -> Self {
-        Calculate {
+        let mut candles = candles
+            .extract::<Vec<PyCandle>>()
+            .expect("Expected a candle");
+
+        candles.sort_by(|a, b| a.start_time.partial_cmp(&b.start_time).unwrap());
+
+        PyCalculateV2 {
             candles,
             initial_balance: initial_balance.unwrap_or(3000f64),
             stake: stake.unwrap_or(10f64),
@@ -34,7 +46,9 @@ impl Calculate {
         }
     }
 
-    pub fn calculate(&self, results: Vec<u8>) -> (f64, f64, f64, f64, f64, f64, usize, usize, f64) {
+    pub fn calculate(&self, results: &PyList) -> PyResult<PyObject> {
+        let results = results.extract::<Vec<u8>>().expect("Expected a candle");
+
         let mut balance = self.initial_balance;
         let mut opened_orders = vec![];
         let mut executed_orders = vec![];
@@ -134,7 +148,7 @@ impl Calculate {
         /*
             wallet, balance, base_real, base_expected, min_balance, drawdown, opened_orders, executed_orders, avg_wait
         */
-        (
+        let result = (
             wallet,
             balance,
             base_count * last_candle.close,
@@ -144,6 +158,11 @@ impl Calculate {
             total,
             executed_orders.len(),
             avg_wait,
-        )
+        );
+
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        Ok(result.into_py(py))
     }
 }
