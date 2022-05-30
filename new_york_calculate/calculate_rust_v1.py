@@ -1,10 +1,10 @@
-from .new_york_calculate import PyCalculate
+from .new_york_calculate import PyCalculateV1
 
 
-class Calculate:
-    def __init__(self, intraday_results, initial_balance=3000, stake=10, gain=1.0, wait=0, profit=0.5, interval=15):
-        self.instance = PyCalculate(candles=intraday_results, initial_balance=initial_balance, stake=stake, gain=gain,
-                                    profit=profit)
+class CalculateRustV1:
+    def __init__(self, intraday_results, initial_balance=3000, stake=10, gain=1.0, profit=0.5):
+        self.instance = PyCalculateV1(candles=intraday_results, initial_balance=initial_balance, stake=stake, gain=gain,
+                                      profit=profit)
         self.initial_balance = initial_balance
         self.stake = stake
         self.gain = gain
