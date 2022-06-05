@@ -10,7 +10,7 @@ class CalculateRust:
         self.gain = gain
         self.profit = profit
 
-    def calculate(self, results: list[int]):
+    def calculate(self, results):
         result = self.instance.calculate(results)
 
         return {
