@@ -42,6 +42,7 @@ jobs:
               strip -x *.node
     name: stable - ${{ matrix.settings.target }} - node@16
     runs-on: ${{ matrix.settings.host }}
+    working-directory: ./node
     steps:
       - uses: actions/checkout@v3
       - name: Setup node
@@ -62,7 +63,6 @@ jobs:
           target: ${{ matrix.settings.target }}
       - name: Cache cargo
         uses: actions/cache@v3
-        workdir: ./node
         with:
           path: |
             ~/.cargo/registry/index/
@@ -75,7 +75,6 @@ jobs:
           key: ${{ matrix.settings.target }}-cargo-${{ matrix.settings.host }}
       - name: Cache NPM dependencies
         uses: actions/cache@v3
-        workdir: ./node
         with:
           path: node_modules
           key: npm-cache-build-${{ matrix.settings.target }}-node@16
