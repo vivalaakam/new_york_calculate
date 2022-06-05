@@ -30,7 +30,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: bindings-x86_64-unknown-linux-musl
-        path: .
+        path: new_york_calculate.*.node
         if-no-files-found: error
 
     - name: Publish
