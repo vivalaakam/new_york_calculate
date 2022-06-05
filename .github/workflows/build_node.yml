@@ -1,0 +1,33 @@
+name: Build nodejs package app
+
+on:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: actions/setup-node@v2
+      with:
+        node-version: '16'
+        registry-url: 'https://registry.npmjs.org'
+
+    - name: Dependencies
+      run: npm ci
+      working-directory: ./node
+
+    - name: Build
+      run: npm run build
+      working-directory: ./node
+
+    - name: Build
+      working-directory: ./node
+      run: npm publish
+      env:
+        NODE_AUTH_TOKEN: ${{secrets.NPM_AUTH_TOKEN}}
