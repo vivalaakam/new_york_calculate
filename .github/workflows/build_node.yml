@@ -23,14 +23,14 @@ jobs:
       working-directory: ./node
 
     - name: Build
-      run: npm run build --target x86_64-unknown-linux-gnu
+      run: npm run build
       working-directory: ./node
 
     - name: Upload artifact
       uses: actions/upload-artifact@v3
       with:
-        name: bindings-${{ matrix.settings.target }}
-        path: ${{ env.APP_NAME }}.*.node
+        name: bindings-x86_64-unknown-linux-musl
+        path: .
         if-no-files-found: error
 
     - name: Publish
