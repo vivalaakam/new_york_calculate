@@ -23,7 +23,7 @@ jobs:
       working-directory: ./node
 
     - name: Build
-      run: npm run build
+      run: npm run build --target x86_64-unknown-linux-gnu
       working-directory: ./node
 
     - name: Build
