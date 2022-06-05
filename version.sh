@@ -17,13 +17,13 @@ fi
 
 new_version="$major.$minor.$patch"
 
-sed -i '' -e "s/version = \"${current_version}\"/version = \"${new_version}\"/" Cargo.toml
+sed -i '' -e "s/version = \"${current_version}\"/version = \"${new_version}\"/" ./Cargo.toml
 cargo generate-lockfile
 
-cd python
+cd ./python
 
-sed -i '' -e "s/version = \"${current_version}\"/version = \"${new_version}\"/" Cargo.toml
-sed -i '' -e "s/VERSION = \"${current_version}\"/VERSION = \"${new_version}\"/" setup.py
+sed -i '' -e "s/version = \"${current_version}\"/version = \"${new_version}\"/" ./Cargo.toml
+sed -i '' -e "s/VERSION = \"${current_version}\"/VERSION = \"${new_version}\"/" ./setup.py
 
 cargo generate-lockfile
 
