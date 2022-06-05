@@ -3,8 +3,8 @@ import hashlib
 from .random_id import random_id
 
 
-def get_applicant_id(interval, start, end):
-    return hashlib.md5("{}:{}:{}".format(interval, start, end).encode()).hexdigest()
+def get_applicant_id(interval, start, end, model_id):
+    return hashlib.md5("{}:{}:{}:{}".format(interval, start, end, model_id).encode()).hexdigest()
 
 
 def get_weight_id(applicant_id):

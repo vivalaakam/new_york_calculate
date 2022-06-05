@@ -35,7 +35,7 @@ def calculate(candles, results, initial_balance=3000, stake=10, gain=1.0, wait=0
                 'commission': order_sum * 0.001,
             })
 
-            # print("order create: {} {} {} {}".format(candle[0], curr_stake, order_sum, balance))
+            # print("py order create: {} {} {} {}".format(candle[0], curr_stake, order_sum, balance))
 
         for order in reversed(opened_orders):
             if order['sellPrice'] < candle[2]:
@@ -55,8 +55,7 @@ def calculate(candles, results, initial_balance=3000, stake=10, gain=1.0, wait=0
                 executed_orders.append(order)
                 opened_orders.remove(order)
 
-                # print("order close: {} {} {}".format(candle[0], balance, wallet))
-
+                # print("py order close: {} {} {}".format(candle[0], balance, wallet))
 
     base_count = 0
     base_sum = 0

@@ -2,7 +2,7 @@ import pickle
 import random
 import timeit
 
-from new_york_calculate import format_candles, Calculate
+from new_york_calculate import format_candles, CalculateRustV1
 
 intraday_results = []
 with open('tests/candles.pickle', 'rb') as handle:
@@ -22,7 +22,7 @@ for i in range(20):
 
     results.append(result)
 
-calculate_rust = Calculate(intraday_results)
+calculate_rust = CalculateRustV1(intraday_results)
 
 
 print(timeit.timeit("""
@@ -37,8 +37,8 @@ calculate_actors(intraday_results, results)
 """, globals=globals(), number=1000))
 
 print(timeit.timeit("""
-from new_york_calculate import Calculate
-calculate_rust = Calculate(intraday_results)
+from new_york_calculate import CalculateRustV1
+calculate_rust = CalculateRustV1(intraday_results)
 for actor in results:
     calculate_rust.calculate(actor)
 """, globals=globals(), number=1000))
