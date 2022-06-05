@@ -26,6 +26,11 @@ jobs:
         pip install maturin
 
     - name: Build
+      working-directory: ./python
       run: |
-        cd python
         maturin build
+
+    - name: Release
+      working-directory: ./python
+      run: |
+        maturin publish -u __token__ -p ${{ secrets.PYPI_TOKEN }}
