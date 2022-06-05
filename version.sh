@@ -22,8 +22,8 @@ cargo generate-lockfile
 
 cd python
 
-sed -i '' -e "s/version = \"${current_version}\"/version = \"${new_version}\"/" python/Cargo.toml
-sed -i '' -e "s/VERSION = \"${current_version}\"/VERSION = \"${new_version}\"/" python/setup.py
+sed -i '' -e "s/version = \"${current_version}\"/version = \"${new_version}\"/" Cargo.toml
+sed -i '' -e "s/VERSION = \"${current_version}\"/VERSION = \"${new_version}\"/" setup.py
 
 cargo generate-lockfile
 
