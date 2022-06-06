@@ -27,7 +27,7 @@ jobs:
       - name: Install dependencies
         working-directory: ./node
         run: |
-          npm run install
+          npm install
 
       - name: Build
         working-directory: ./node
