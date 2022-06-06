@@ -9,7 +9,6 @@
     "build-js": "tsc",
     "build-debug": "npm run build --",
     "build-release": "npm run build -- --release",
-    "install": "npm run build-release",
     "test": "cargo test",
     "prebuild": "npm run clean-native",
     "clean-native": "rm -rf native/*.node",
