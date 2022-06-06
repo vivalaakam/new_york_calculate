@@ -1,12 +1,10 @@
-#![deny(clippy::all)]
+mod get_id;
 
-#[macro_use]
-extern crate napi_derive;
+use crate::get_id::get_applicant_id;
+use neon::prelude::*;
 
-use new_york_calculate_core;
-
-
-#[napi]
-fn get_applicant_id(interval: String, start: String, end: String, model_id: String) -> String {
-    new_york_calculate_core::get_id::get_applicant_id(interval, start, end, model_id)
+#[neon::main]
+fn main(mut cx: ModuleContext) -> NeonResult<()> {
+    cx.export_function("get_applicant_id", get_applicant_id)?;
+    Ok(())
 }

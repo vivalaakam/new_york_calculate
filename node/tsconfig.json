@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "module": "commonjs",
+    "target": "es2020",
+    "sourceMap": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "outDir": "dist",
+    "experimentalDecorators": true,
+    "incremental": true,
+    "baseUrl": "./src",
+    "strict": true,
+    "typeRoots": ["./node_modules/@types", "./src/types"],
+    "lib": ["es2020"],
+    "skipLibCheck": true
+  },
+  "include": [
+    "new_york_calculate/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts"
+  ]
+}
