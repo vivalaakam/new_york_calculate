@@ -13,7 +13,7 @@
     "prebuild": "npm run clean-native",
     "clean-native": "rm -rf native/*.node",
     "package": "node-pre-gyp package",
-    "publish:package": "node-pre-gyp-github publish"
+    "publish:package": "node-pre-gyp-github publish --release"
   },
   "author": "Andrey Makarov",
   "license": "ISC",
