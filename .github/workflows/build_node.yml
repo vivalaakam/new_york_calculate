@@ -32,6 +32,7 @@ jobs:
       - name: Build
         working-directory: ./node
         run: |
+          mkdir native
           npm run build
 
       - name: Publish artefacts
