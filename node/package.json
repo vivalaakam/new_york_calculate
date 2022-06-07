@@ -1,5 +1,5 @@
 {
-  "name": "new_york_calculate",
+  "name": "vivalaakam_new_york_calculate",
   "version": "0.0.11",
   "description": "",
   "main": "dist/index.js",
@@ -15,7 +15,10 @@
     "package": "node-pre-gyp package",
     "publish:package": "node-pre-gyp-github publish --release"
   },
-  "author": "Andrey Makarov",
+  "author": {
+    "name": "Andrey Makarov",
+    "email": "viva.la.akam@gmail.com"
+  },
   "license": "ISC",
   "devDependencies": {
     "@mapbox/node-pre-gyp": "^1.0.9",
