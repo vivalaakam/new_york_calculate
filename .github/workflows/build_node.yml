@@ -5,7 +5,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  NODE_PRE_GYP_GITHUB_TOKEN: ${{ secrets.NODE_PRE_GYP_GITHUB_TOKEN }}
 
 jobs:
   build:
@@ -39,6 +38,8 @@ jobs:
         run: |
           npm run package 
           npm run publish:package
+        env:
+          NODE_PRE_GYP_GITHUB_TOKEN: ${{secrets.NODE_PRE_GYP_GITHUB_TOKEN}}
 
   build-js:
     runs-on: ubuntu-latest
@@ -47,9 +48,10 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Use Node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version: 16
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
         working-directory: ./node
