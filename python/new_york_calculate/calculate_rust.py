@@ -11,7 +11,7 @@ class CalculateRust:
         self.profit = profit
 
     def calculate(self, results):
-        result = self.instance.calculate(results)
+        result = self.instance.calculate(list(results))
 
         return {
             'initial_balance': self.initial_balance,
