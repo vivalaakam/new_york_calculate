@@ -29,6 +29,16 @@ cargo generate-lockfile
 
 cd ../
 
+cd ./node
+
+sed -i '' -e "s/version = \"${current_version}\"/version = \"${new_version}\"/" ./Cargo.toml
+sed -i '' -e "s/\"version\": \"${current_version}\"/\"version\": \"${new_version}\"/" ./package.json
+
+cargo generate-lockfile
+npm install
+
+cd ../
+
 git add --all
 git commit -m "v${new_version}"
 git tag -a v${new_version} -m v${new_version}
