@@ -111,22 +111,20 @@ impl Calculate {
             base_sum += order.qty * order.sell_price;
         }
 
-        let total = executed_orders.len();
-
         for order in &executed_orders {
             avg_wait += ((order.end_time - order.start_time) + (self.interval * 60 - 1)) as f64;
         }
 
         let last_candle = self.candles.last().unwrap();
 
-        let drawdown = if total > 0 {
+        let drawdown = if opened_orders.len() > 0 {
             (base_count * last_candle.close) / base_sum
         } else {
             1f64
         };
 
-        let avg_wait = if total > 0 {
-            avg_wait / total as f64
+        let avg_wait = if executed_orders.len() > 0 {
+            avg_wait / executed_orders.len() as f64
         } else {
             0f64
         };
@@ -141,7 +139,7 @@ impl Calculate {
             base_sum,
             min_balance,
             drawdown,
-            total,
+            opened_orders.len(),
             executed_orders.len(),
             avg_wait,
         )
