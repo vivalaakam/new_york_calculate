@@ -1,3 +1,4 @@
+import math
 import os
 import pickle
 
@@ -33,6 +34,8 @@ def get_candles(days, start, interval, look_back):
     candle_step = int(1440 / interval)
 
     cache_val = {}
+
+    min_key = math.inf
 
     for i in range(len(intraday) - candle_step * 2):
         candle_key = intraday[candle_step + i][0]
@@ -79,7 +82,8 @@ def get_candles(days, start, interval, look_back):
 
             cache_val[candle_key] = val[-look_back:]
 
-    min_key = min(cache_val.keys())
+            if candle_key < min_key:
+                min_key = candle_key
 
     intraday = list(filter(lambda x: x[0] >= min_key, intraday))
 
