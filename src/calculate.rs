@@ -1,5 +1,6 @@
 use crate::candle::Candle;
 use crate::order::Order;
+use crate::score::get_score;
 use crate::utils::{ceil_to_nearest, floor_to_nearest};
 
 pub struct Calculate {
@@ -34,7 +35,7 @@ impl Calculate {
         }
     }
 
-    pub fn calculate(&self, results: Vec<u8>) -> (f64, f64, f64, f64, f64, f64, usize, usize, f64) {
+    pub fn calculate(&self, results: Vec<u8>) -> (f64, f64, f64, f64, f64, f64, usize, usize, f64, f64) {
         let mut balance = self.initial_balance;
         let mut opened_orders = vec![];
         let mut executed_orders = vec![];
@@ -130,7 +131,7 @@ impl Calculate {
         };
 
         /*
-            wallet, balance, base_real, base_expected, min_balance, drawdown, opened_orders, executed_orders, avg_wait
+            wallet, balance, base_real, base_expected, min_balance, drawdown, opened_orders, executed_orders, avg_wait, score
         */
         (
             wallet,
@@ -142,6 +143,7 @@ impl Calculate {
             opened_orders.len(),
             executed_orders.len(),
             avg_wait,
+            get_score(wallet, drawdown)
         )
     }
 }

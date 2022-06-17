@@ -8,3 +8,4 @@ pub mod get_id;
 mod hash_md5;
 mod order;
 pub mod utils;
+mod score;
