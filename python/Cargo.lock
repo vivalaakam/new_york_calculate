@@ -154,7 +154,7 @@ dependencies = [
 
 [[package]]
 name = "new_york_calculate"
-version = "0.0.18"
+version = "0.0.19"
 dependencies = [
  "log",
  "new_york_calculate_core",
@@ -164,7 +164,7 @@ dependencies = [
 
 [[package]]
 name = "new_york_calculate_core"
-version = "0.0.18"
+version = "0.0.19"
 dependencies = [
  "log",
  "md5",

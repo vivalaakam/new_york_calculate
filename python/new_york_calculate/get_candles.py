@@ -12,15 +12,15 @@ from .intervals import get_interval_key
 def get_candles(days, start, interval, look_back):
     intraday_results = []
 
-    for i in range(int(days) + 2):
-        start = start + i * 86400
+    for i in range(days + 2):
+        start_stamp = start + i * 86400
 
-        fname = '{}.pickle'.format(start)
+        fname = '{}.pickle'.format(start_stamp)
 
         if not os.path.exists(fname):
             r = requests.get(
                 'https://api.binance.com/api/v3/klines?symbol=XRPUSDT&interval={}&startTime={}&endTime={}&limit=1000'.format(
-                    get_interval_key(int(interval)), start * 1000, (start + 1439 * 60) * 1000))
+                    get_interval_key(int(interval)), start_stamp * 1000, (start_stamp + 1439 * 60) * 1000))
             res = r.json()
 
             with open(fname, 'wb') as handle:
