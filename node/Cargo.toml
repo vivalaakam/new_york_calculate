@@ -1,6 +1,6 @@
 [package]
 name = "new_york_calculate"
-version = "0.0.16"
+version = "0.0.17"
 authors = ["Andrey Makarov"]
 license = "ISC"
 edition = "2018"
