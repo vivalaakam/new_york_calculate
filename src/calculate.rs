@@ -136,7 +136,11 @@ impl Calculate {
             0f64
         };
 
-        let successful_ratio = successful_orders as f64 / executed_orders.len() as f64;
+        let successful_ratio = if executed_orders.len() > 0 {
+            successful_orders as f64 / executed_orders.len() as f64
+        } else {
+            0f64
+        };
 
         /*
             wallet, balance, base_real, base_expected, min_balance, drawdown, opened_orders, executed_orders, avg_wait, score, successful_ratio
