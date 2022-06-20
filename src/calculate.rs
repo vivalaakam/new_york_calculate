@@ -35,7 +35,7 @@ impl Calculate {
         }
     }
 
-    pub fn calculate(&self, results: Vec<u8>) -> (f64, f64, f64, f64, f64, f64, usize, usize, f64, f64) {
+    pub fn calculate(&self, results: Vec<u8>) -> (f64, f64, f64, f64, f64, f64, usize, usize, f64, f64, f64) {
         let mut balance = self.initial_balance;
         let mut opened_orders = vec![];
         let mut executed_orders = vec![];
@@ -105,15 +105,21 @@ impl Calculate {
 
         let mut base_count = 0f64;
         let mut base_sum = 0f64;
-        let mut avg_wait = 0f64;
-
+        let mut avg_wait = 0;
+        let mut successful_orders = 0;
         for order in &opened_orders {
             base_count += order.qty;
             base_sum += order.qty * order.sell_price;
         }
 
         for order in &executed_orders {
-            avg_wait += ((order.end_time - order.start_time) + (self.interval * 60 - 1)) as f64;
+            let time = (order.end_time - order.start_time) + (self.interval * 60 - 1);
+
+            avg_wait += time;
+
+            if time < 12 * 60 * 60 {
+                successful_orders += 1
+            }
         }
 
         let last_candle = self.candles.last().unwrap();
@@ -125,10 +131,12 @@ impl Calculate {
         };
 
         let avg_wait = if executed_orders.len() > 0 {
-            avg_wait / executed_orders.len() as f64
+            avg_wait as f64 / executed_orders.len() as f64
         } else {
             0f64
         };
+
+        let successful_ratio = successful_orders as f64 / executed_orders.len() as f64;
 
         /*
             wallet, balance, base_real, base_expected, min_balance, drawdown, opened_orders, executed_orders, avg_wait, score
@@ -143,7 +151,8 @@ impl Calculate {
             opened_orders.len(),
             executed_orders.len(),
             avg_wait,
-            get_score(wallet, drawdown)
+            get_score(wallet, drawdown, successful_ratio),
+            successful_ratio
         )
     }
 }

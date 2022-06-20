@@ -27,5 +27,6 @@ class CalculateRust:
             'opened_orders': result[6],
             'executed_orders': result[7],
             'avg_wait': result[8],
-            'score': result[9]
+            'score': result[9],
+            'successful_ratio': result[10],
         }
