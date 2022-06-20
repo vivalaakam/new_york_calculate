@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 from setuptools_rust import RustExtension
 
-VERSION = "0.0.20"
+VERSION = "0.0.21"
 DESCRIPTION = "My first Python package"
 LONG_DESCRIPTION = "My first Python package with a slightly longer description"
 
