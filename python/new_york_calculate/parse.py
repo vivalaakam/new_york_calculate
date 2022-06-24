@@ -13,13 +13,16 @@ def prepare_params(params):
 
 
 class Parse:
-    def __init__(self, remote_url, app_id, rest_key, debug=False):
+    def __init__(self, remote_url, app_id, rest_key, master_key='', debug=False):
         self.headers = {
             "X-Parse-Application-Id": app_id,
             "X-Parse-REST-API-Key": rest_key,
             "Content-Type": "application/json",
             "Accept": "application/json, text/plain, */*"
         }
+
+        if master_key != '':
+            self.headers['X-Parse-Master-Key'] = master_key
 
         self.debug = debug
         self.remote = remote_url
