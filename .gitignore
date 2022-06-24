@@ -7,3 +7,4 @@ lib
 .pytest_cache
 new_york_calculate.*.so
 __pycache__
+*.pickle

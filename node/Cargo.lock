@@ -76,7 +76,7 @@ dependencies = [
 
 [[package]]
 name = "new_york_calculate"
-version = "0.0.22"
+version = "0.0.23"
 dependencies = [
  "neon",
  "new_york_calculate_core",
@@ -84,7 +84,7 @@ dependencies = [
 
 [[package]]
 name = "new_york_calculate_core"
-version = "0.0.22"
+version = "0.0.23"
 dependencies = [
  "log",
  "md5",
