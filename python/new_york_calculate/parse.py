@@ -5,6 +5,13 @@ from urllib.parse import urlencode
 import requests
 
 
+def prepare_params(params):
+    for k, v in params.items():
+        params[k] = json.dumps(v)
+
+    return urlencode(params)
+
+
 class Parse:
     def __init__(self, remote_url, app_id, rest_key, debug=False):
         self.headers = {
@@ -18,7 +25,7 @@ class Parse:
         self.remote = remote_url
 
     def get_request(self, remote, **kwargs):
-        params = urlencode(kwargs)
+        params = prepare_params(kwargs)
         req = requests.get("{}{}?{}".format(self.remote, remote, params), headers=self.headers)
 
         if self.debug:
@@ -26,39 +33,35 @@ class Parse:
 
         return req.json()
 
-    def delete_request(self, remote, params=None):
-        if params is None:
-            params = {}
-
-        req = requests.delete("{}{}?{}".format(self.remote, remote, json.dumps(params)), headers=self.headers)
+    def delete_request(self, remote, **kwargs):
+        params = prepare_params(kwargs)
+        req = requests.delete("{}{}?{}".format(self.remote, remote, params), headers=self.headers)
 
         if self.debug:
             print(to_curl(req.request))
 
         return req.json()
 
-    def post_request(self, remote, params=None, data=None):
-        if params is None:
-            params = {}
+    def post_request(self, remote, data=None, **kwargs):
+        params = prepare_params(kwargs)
 
         if data is None:
             data = {}
 
-        req = requests.post("{}{}?{}".format(self.remote, remote, json.dumps(params)), data=json.dumps(data),
+        req = requests.post("{}{}?{}".format(self.remote, remote, params), data=json.dumps(data),
                             headers=self.headers)
         if self.debug:
             print(to_curl(req.request))
 
         return req.json()
 
-    def put_request(self, remote, params=None, data=None):
-        if params is None:
-            params = {}
+    def put_request(self, remote, data=None, **kwargs):
+        params = prepare_params(kwargs)
 
         if data is None:
             data = {}
 
-        req = requests.put("{}{}?{}".format(self.remote, remote, json.dumps(params)), data=json.dumps(data),
+        req = requests.put("{}{}?{}".format(self.remote, remote, params), data=json.dumps(data),
                            headers=self.headers)
 
         if self.debug:

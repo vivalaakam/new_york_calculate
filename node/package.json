@@ -1,6 +1,6 @@
 {
   "name": "new_york_calculate",
-  "version": "0.0.27",
+  "version": "0.0.28",
   "description": "",
   "main": "dist/index.js",
   "scripts": {
