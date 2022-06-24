@@ -1,5 +1,6 @@
 import json
 from shlex import quote
+from urllib.parse import urlencode
 
 import requests
 
@@ -16,11 +17,9 @@ class Parse:
         self.debug = debug
         self.remote = remote_url
 
-    def get_request(self, remote, params=None):
-        if params is None:
-            params = {}
-
-        req = requests.get("{}{}?{}".format(self.remote, remote, json.dumps(params)), headers=self.headers)
+    def get_request(self, remote, **kwargs):
+        params = urlencode(kwargs)
+        req = requests.get("{}{}?{}".format(self.remote, remote, params), headers=self.headers)
 
         if self.debug:
             print(to_curl(req.request))
