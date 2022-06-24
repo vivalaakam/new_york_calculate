@@ -6,10 +6,10 @@ use crate::py_calculate::PyCalculate;
 use crate::py_calculate_v1::PyCalculateV1;
 use crate::py_calculate_v2::PyCalculateV2;
 
+mod py_calculate;
 mod py_calculate_v1;
 mod py_calculate_v2;
 mod py_candle;
-mod py_calculate;
 
 #[pyfunction]
 pub fn get_applicant_id(interval: String, start: String, end: String, model_id: String) -> String {

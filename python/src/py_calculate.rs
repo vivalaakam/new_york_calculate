@@ -23,19 +23,14 @@ impl PyCalculate {
         let mut candles = candles
             .extract::<Vec<PyCandle>>()
             .expect("Expected a candle")
-            .into_iter().map(|c| c.into()).collect::<Vec<Candle>>();
+            .into_iter()
+            .map(|c| c.into())
+            .collect::<Vec<Candle>>();
 
         candles.sort_by(|a, b| a.start_time.partial_cmp(&b.start_time).unwrap());
 
         PyCalculate {
-            instance: Calculate::new(
-                candles,
-                initial_balance,
-                stake,
-                gain,
-                profit,
-                interval,
-            )
+            instance: Calculate::new(candles, initial_balance, stake, gain, profit, interval),
         }
     }
 

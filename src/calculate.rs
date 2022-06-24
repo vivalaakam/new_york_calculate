@@ -35,7 +35,10 @@ impl Calculate {
         }
     }
 
-    pub fn calculate(&self, results: Vec<u8>) -> (f64, f64, f64, f64, f64, f64, usize, usize, f64, f64, f64) {
+    pub fn calculate(
+        &self,
+        results: Vec<u8>,
+    ) -> (f64, f64, f64, f64, f64, f64, usize, usize, f64, f64, f64) {
         let mut balance = self.initial_balance;
         let mut opened_orders = vec![];
         let mut executed_orders = vec![];
@@ -156,7 +159,7 @@ impl Calculate {
             executed_orders.len(),
             avg_wait,
             get_score(wallet, drawdown, successful_ratio),
-            successful_ratio
+            successful_ratio,
         )
     }
 }
