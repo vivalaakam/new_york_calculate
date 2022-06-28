@@ -423,7 +423,7 @@ dependencies = [
 
 [[package]]
 name = "new_york_calculate"
-version = "0.0.31"
+version = "0.0.32"
 dependencies = [
  "neon",
  "new_york_calculate_core",
@@ -431,7 +431,7 @@ dependencies = [
 
 [[package]]
 name = "new_york_calculate_core"
-version = "0.0.31"
+version = "0.0.32"
 dependencies = [
  "log",
  "md5",
