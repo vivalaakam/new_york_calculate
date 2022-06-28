@@ -78,6 +78,8 @@ class Parse:
     def get_model(self, model_id):
         return self.get_request("/classes/Models/{}".format(model_id))
 
+    def get_model_weights(self, model_weight_id):
+        return self.get_request("/classes/ModelWeights/{}".format(model_weight_id))
 
 def to_curl(request, compressed=False, verify=True):
     """
