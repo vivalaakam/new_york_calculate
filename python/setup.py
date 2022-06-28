@@ -15,7 +15,7 @@ setup(
     long_description=LONG_DESCRIPTION,
     packages=find_packages(),
     rust_extensions=[RustExtension("new_york_calculate.new_york_calculate", debug=False)],
-    install_requires=["numpy"],
+    install_requires=["numpy", "asyncio"],
     keywords=["python", 'first package'],
     classifiers=[]
 )
