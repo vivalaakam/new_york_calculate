@@ -6,7 +6,7 @@ from .format_candles import format_candles
 from .format_result import format_result
 from .ga import crossover, mutation
 from .get_id import get_result_id, get_weight_id
-from .get_candles_rust import get_candles_rust, get_candles_rust_async
+from .get_candles_rust import get_candles_rust
 from .intervals import get_interval_key
 from .list_to_weights import list_to_weights
 from .random_id import random_id

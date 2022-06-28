@@ -1,5 +1,5 @@
 use pyo3::prelude::*;
-use pyo3_asyncio;
+use tokio::runtime::Builder;
 
 use new_york_calculate_core;
 
@@ -10,11 +10,16 @@ mod py_calculate;
 mod py_candle;
 
 #[pyfunction]
-pub fn get_candles(py: Python<'_>, ticker: String, period: usize, start_time: u64, look_back: usize) -> PyResult<&PyAny> {
-    pyo3_asyncio::tokio::future_into_py(py, async move {
-        let candles = new_york_calculate_core::get_candles(ticker, period, start_time, look_back).await;
-        Ok(candles.into_iter().map(|c| c.into()).collect::<Vec<PyCandle>>())
-    })
+pub fn get_candles(ticker: String, period: usize, start_time: u64, look_back: usize) -> Vec<PyCandle> {
+    let candles = Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(async {
+            new_york_calculate_core::get_candles(ticker, period, start_time, look_back).await
+        });
+
+    candles.into_iter().map(|c| c.into()).collect::<Vec<PyCandle>>()
 }
 
 #[pyfunction]
