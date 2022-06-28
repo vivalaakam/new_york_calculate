@@ -1,9 +1,9 @@
 use pyo3::prelude::*;
-use pyo3::types::PyList;
 
 use new_york_calculate_core::Candle;
 
 #[pyclass]
+#[derive(Default, FromPyObject)]
 pub struct PyCandle {
     #[pyo3(get)]
     pub start_time: u64,
@@ -17,22 +17,14 @@ pub struct PyCandle {
     pub close: f64,
     #[pyo3(get)]
     pub volume: f64,
-}
-
-impl FromPyObject<'_> for PyCandle {
-    fn extract(ob: &PyAny) -> PyResult<Self> {
-        let keypair = ob.downcast::<PyList>().expect("Expected a tuple");
-        let candle = PyCandle {
-            start_time: *&keypair.get_item(0).extract::<u64>().expect("Expected u64"),
-            open: *&keypair.get_item(1).extract::<f64>().expect("Expected u64"),
-            high: *&keypair.get_item(2).extract::<f64>().expect("Expected u64"),
-            low: *&keypair.get_item(3).extract::<f64>().expect("Expected u64"),
-            close: *&keypair.get_item(4).extract::<f64>().expect("Expected u64"),
-            volume: *&keypair.get_item(5).extract::<f64>().expect("Expected u64"),
-        };
-
-        Ok(candle)
-    }
+    #[pyo3(get)]
+    pub hist: Vec<f64>,
+    #[pyo3(get)]
+    pub shape: Vec<i32>,
+    #[pyo3(get)]
+    pub max_profit_12: f64,
+    #[pyo3(get)]
+    pub max_profit_24: f64,
 }
 
 impl Into<Candle> for PyCandle {
@@ -44,6 +36,40 @@ impl Into<Candle> for PyCandle {
             low: self.low,
             close: self.close,
             volume: self.volume,
+            ..Candle::default()
+        }
+    }
+}
+
+impl Into<PyCandle> for Candle {
+    fn into(self) -> PyCandle {
+        PyCandle {
+            start_time: self.start_time,
+            open: self.open,
+            high: self.high,
+            low: self.low,
+            close: self.close,
+            volume: self.volume,
+            hist: self.history,
+            shape: self.shape,
+            max_profit_12: self.max_profit_12,
+            max_profit_24: self.max_profit_24,
+        }
+    }
+}
+
+#[pymethods]
+impl PyCandle {
+    #[new]
+    pub fn new(params: (u64, f64, f64, f64, f64, f64)) -> Self {
+        PyCandle {
+            start_time: params.0,
+            open: params.1,
+            high: params.2,
+            low: params.3,
+            close: params.4,
+            volume: params.5,
+            ..PyCandle::default()
         }
     }
 }

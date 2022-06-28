@@ -9,6 +9,3 @@ def test_get_candles():
 
     assert len(results) == 288
     assert np.sum(results) == 260
-
-
-test_get_candles()

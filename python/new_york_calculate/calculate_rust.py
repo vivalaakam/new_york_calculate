@@ -1,9 +1,12 @@
-from .new_york_calculate import PyCalculate
+from .new_york_calculate import PyCalculate, PyCandle
 
 
 class CalculateRust:
     def __init__(self, intraday_results, initial_balance=3000, stake=10, gain=1.0, profit=0.5):
-        self.instance = PyCalculate(candles=intraday_results, initial_balance=initial_balance, stake=stake, gain=gain,
+        candles = list(map(lambda candle: candle if isinstance(candle, PyCandle) else PyCandle(
+            (*candle[0:6],)), intraday_results))
+
+        self.instance = PyCalculate(candles=candles, initial_balance=initial_balance, stake=stake, gain=gain,
                                     profit=profit)
         self.initial_balance = initial_balance
         self.stake = stake
