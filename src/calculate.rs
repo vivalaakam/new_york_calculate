@@ -65,11 +65,6 @@ impl Calculate {
                     });
 
                     opened_orders.sort_by(|a, b| b.sell_price.partial_cmp(&a.sell_price).unwrap());
-
-                    // println!(
-                    //     "ru order create: {} {} {} {}",
-                    //     candle.start_time, curr_stake, order_sum, balance
-                    // )
                 }
             }
 
@@ -107,13 +102,17 @@ impl Calculate {
         }
 
         let mut base_count = 0f64;
-        let mut base_sum = 0f64;
+        let mut base_expected = 0f64;
         let mut avg_wait = 0;
         let mut successful_orders = 0;
         for order in &opened_orders {
             base_count += order.qty;
-            base_sum += order.qty * order.sell_price;
+            base_expected += order.qty * order.sell_price;
         }
+
+        let last_candle = self.candles.last().unwrap();
+
+        let base_real = base_count * last_candle.close;
 
         for order in &executed_orders {
             let time = (order.end_time - order.start_time) + (self.interval * 60 - 1);
@@ -125,10 +124,8 @@ impl Calculate {
             }
         }
 
-        let last_candle = self.candles.last().unwrap();
-
         let drawdown = if opened_orders.len() > 0 {
-            (base_count * last_candle.close) / base_sum
+            (base_real + balance) / (base_expected + balance)
         } else {
             1f64
         };
@@ -151,8 +148,8 @@ impl Calculate {
         (
             wallet,
             balance,
-            base_count * last_candle.close,
-            base_sum,
+            base_real,
+            base_expected,
             min_balance,
             drawdown,
             opened_orders.len(),

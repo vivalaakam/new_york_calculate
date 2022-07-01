@@ -3,7 +3,6 @@ from .calculate_actors import calculate_actors
 from .calculate_rust import CalculateRust
 from .debug_best import debug_best
 from .format_candles import format_candles
-from .format_result import format_result
 from .ga import crossover, mutation
 from .get_id import get_result_id, get_weight_id
 from .get_candles_rust import get_candles_rust
