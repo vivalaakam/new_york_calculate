@@ -8,7 +8,7 @@ from new_york_calculate import prepare_candles, format_candles, CalculateRust
 def test_prepare_candles():
     intraday_results = []
 
-    with open('tests/candles.json', 'rb') as handle:
+    with open('../tests/candles.json', 'rb') as handle:
         intraday_results += json.load(handle)
 
     intraday_results = format_candles(intraday_results)
