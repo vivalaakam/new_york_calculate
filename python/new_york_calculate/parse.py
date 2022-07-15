@@ -12,6 +12,22 @@ def prepare_params(params):
     return urlencode(params)
 
 
+def create_batch(model, data):
+    return {
+        "method": "POST",
+        "path": "/parse/classes/{}".format(model),
+        "body": data
+    }
+
+
+def update_batch(model, object_id, data):
+    return {
+        "method": "PUT",
+        "path": "/parse/classes/{}/".format(model, object_id),
+        "body": data
+    }
+
+
 class Parse:
     def __init__(self, remote_url, app_id, rest_key, master_key='', debug=False):
         self.headers = {
@@ -80,6 +96,12 @@ class Parse:
 
     def get_model_weights(self, model_weight_id):
         return self.get_request("/classes/ModelWeights/{}".format(model_weight_id))
+
+    def batch(self, request_items):
+        return self.post_request("/batch", {
+            "requests": request_items
+        })
+
 
 def to_curl(request, compressed=False, verify=True):
     """
