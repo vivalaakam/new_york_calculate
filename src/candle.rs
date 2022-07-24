@@ -11,7 +11,7 @@ pub struct Candle {
     pub buy_base: f64,
     pub buy_quote: f64,
     pub history: Vec<f64>,
-    pub shape: Vec<i32>,
+    pub shape: Vec<usize>,
     pub max_profit_12: f64,
     pub max_profit_24: f64,
 }
