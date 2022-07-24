@@ -16,7 +16,7 @@ pub fn get_candles(ticker: String, period: usize, start_time: u64, look_back: us
         .build()
         .unwrap()
         .block_on(async {
-            new_york_calculate_core::get_candles(ticker, period, start_time, look_back).await
+            new_york_calculate_core::get_candles(ticker, period, start_time, look_back, None).await
         });
 
     candles.into_iter().map(|c| c.into()).collect::<Vec<PyCandle>>()
