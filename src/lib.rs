@@ -12,7 +12,7 @@ mod get_candles;
 pub mod get_id;
 mod get_interval_key;
 mod hash_md5;
-mod indicators;
+pub mod indicators;
 mod order;
 mod portfolio;
 mod score;
