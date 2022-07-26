@@ -1,6 +1,7 @@
 use new_york_calculate_core::{Calculate, Candle};
 use pyo3::prelude::*;
 use pyo3::types::PyList;
+use crate::py_calculate_result::PyCalculateResult;
 
 use crate::py_candle::PyCandle;
 
@@ -34,14 +35,11 @@ impl PyCalculate {
         }
     }
 
-    pub fn calculate(&self, results: &PyList) -> PyResult<PyObject> {
+    pub fn calculate(&self, results: &PyList) -> PyResult<PyCalculateResult> {
         let results = results.extract::<Vec<u8>>().expect("Expected a candle");
 
         let result = self.instance.calculate(results);
 
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
-        Ok(result.into_py(py))
+        Ok(result.into())
     }
 }
