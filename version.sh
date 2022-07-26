@@ -1,21 +1,7 @@
 #!/bin/bash
 set -e
 
-cargo check
-
-cargo test
-
-cargo fmt --all -- --check
-
-source venv/bin/activate
-
-cd ./python
-
-maturin build
-
-pytest
-
-cd ../
+make test
 
 current_version=$(cat Cargo.toml | grep 'version = "*"' | head -1 | awk -F = '{ print $2 }' | sed 's/[", ]//g')
 
