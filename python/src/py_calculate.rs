@@ -40,9 +40,6 @@ impl PyCalculate {
 
         let result = self.instance.calculate(results);
 
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
-        Ok(result.into_py(py))
+        Ok(result.into())
     }
 }
