@@ -1,7 +1,7 @@
+use crate::calculate_command::CalculateCommand;
+use crate::calculate_iter::CalculateIter;
+use crate::calculate_result::CalculateResult;
 use crate::candle::Candle;
-use crate::order::Order;
-use crate::score::get_score;
-use crate::utils::{ceil_to_nearest, floor_to_nearest};
 
 pub struct Calculate {
     candles: Vec<Candle>,
@@ -35,129 +35,35 @@ impl Calculate {
         }
     }
 
-    pub fn calculate(
-        &self,
-        results: Vec<u8>,
-    ) -> (f64, f64, f64, f64, f64, f64, usize, usize, f64, f64, f64) {
-        let mut balance = self.initial_balance;
-        let mut opened_orders = vec![];
-        let mut executed_orders = vec![];
-        let mut wallet = 0f64;
-        let mut min_balance = self.initial_balance;
-
-        for (ind, candle) in self.candles.iter().enumerate() {
-            min_balance = min_balance.min(balance);
-
-            if ind < results.len() {
-                if results[ind] == 1 && balance > self.stake {
-                    let curr_stake = floor_to_nearest(self.stake / candle.open, self.step_lot);
-                    let order_sum = curr_stake * candle.open;
-                    balance -= order_sum;
-                    balance -= order_sum * 0.001;
-
-                    opened_orders.push(Order {
-                        start_time: candle.start_time,
-                        end_time: 0,
-                        buy_price: candle.open,
-                        sell_price: ceil_to_nearest(candle.open * self.gain, self.step_price),
-                        qty: curr_stake,
-                        commission: order_sum * 0.001,
-                    });
-
-                    opened_orders.sort_by(|a, b| b.sell_price.partial_cmp(&a.sell_price).unwrap());
+    pub fn calculate(&self, results: Vec<u8>) -> CalculateResult {
+        let mut calculate_iter = CalculateIter::new(
+            &self.candles,
+            self.initial_balance,
+            self.stake,
+            self.gain,
+            self.profit,
+            self.interval,
+            self.step_lot,
+            self.step_price,
+            Box::new(move |_candle, ind| match results.get(ind) {
+                None => CalculateCommand::None,
+                Some(val) => {
+                    if *val == 0 {
+                        CalculateCommand::None
+                    } else {
+                        CalculateCommand::BuyProfit
+                    }
                 }
-            }
+            }),
+        );
 
-            let mut cont = true;
+        let mut cont = Ok(());
 
-            while cont {
-                let order = opened_orders.last();
-
-                if order.is_none() || order.unwrap().sell_price > candle.high {
-                    cont = false;
-                    continue;
-                }
-
-                let mut order = opened_orders.pop().unwrap();
-
-                let order_sum = order.sell_price * order.qty;
-
-                balance += order_sum;
-                balance -= order_sum * 0.001;
-                order.commission += order_sum * 0.001;
-
-                order.end_time = candle.start_time;
-
-                let profit_size = ((order.sell_price - order.buy_price) * order.qty
-                    - order.commission)
-                    * self.profit;
-
-                balance -= profit_size;
-                wallet += profit_size;
-
-                executed_orders.push(order);
-
-                // println!("ru order close: {} {} {}", candle.start_time, balance, wallet);
-            }
+        while cont.is_ok() {
+            cont = calculate_iter.next();
         }
 
-        let mut base_count = 0f64;
-        let mut base_expected = 0f64;
-        let mut avg_wait = 0;
-        let mut successful_orders = 0;
-        for order in &opened_orders {
-            base_count += order.qty;
-            base_expected += order.qty * order.sell_price;
-        }
-
-        let last_candle = self.candles.last().unwrap();
-
-        let base_real = base_count * last_candle.close;
-
-        for order in &executed_orders {
-            let time = (order.end_time - order.start_time) + (self.interval * 60 - 1);
-
-            avg_wait += time;
-
-            if time < 12 * 60 * 60 {
-                successful_orders += 1
-            }
-        }
-
-        let drawdown = if opened_orders.len() > 0 {
-            (base_real + balance) / (base_expected + balance)
-        } else {
-            1f64
-        };
-
-        let avg_wait = if executed_orders.len() > 0 {
-            avg_wait as f64 / executed_orders.len() as f64
-        } else {
-            0f64
-        };
-
-        let successful_ratio = if executed_orders.len() > 0 {
-            successful_orders as f64 / executed_orders.len() as f64
-        } else {
-            0f64
-        };
-
-        /*
-            wallet, balance, base_real, base_expected, min_balance, drawdown, opened_orders, executed_orders, avg_wait, score, successful_ratio
-        */
-        (
-            wallet,
-            balance,
-            base_real,
-            base_expected,
-            min_balance,
-            drawdown,
-            opened_orders.len(),
-            executed_orders.len(),
-            avg_wait,
-            get_score(wallet, drawdown, successful_ratio),
-            successful_ratio,
-        )
+        calculate_iter.into()
     }
 }
 
