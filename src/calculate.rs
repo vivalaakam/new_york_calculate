@@ -160,3 +160,61 @@ impl Calculate {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::candle_response::CandleResponse;
+    use crate::get_candles::perform_candles;
+    use serde_json::from_reader;
+    use std::fs::File;
+
+    #[test]
+    fn should_work() {
+        let file = File::open("tests/candles.json").expect("file should open read only");
+        let json = from_reader::<_, Vec<CandleResponse>>(file);
+
+        assert_eq!(json.is_ok(), true);
+
+        let candles = json
+            .unwrap()
+            .into_iter()
+            .map(|x| x.into())
+            .collect::<Vec<Candle>>();
+
+        let candles = perform_candles(candles, 1655769600, 12, Some(vec![]));
+
+        let results = candles
+            .clone()
+            .into_iter()
+            .map(|candle| if candle.max_profit_12 > 1.0 { 1 } else { 0 })
+            .collect::<Vec<u8>>();
+
+        let calculate = Calculate::new(candles, None, None, None, None, None);
+
+        let resp = calculate.calculate(results);
+
+        /* wallet */
+        assert_eq!(resp.0, 8.26311035000005);
+        /* balance */
+        assert_eq!(resp.1, 2998.380237350004);
+        /* base_real */
+        assert_eq!(resp.2, 9.882000000000001);
+        /* base_expected */
+        assert_eq!(resp.3, 9.972000000000001);
+        /* min_balance */
+        assert_eq!(resp.4, 2560.199113750004);
+        /* drawdown */
+        assert_eq!(resp.5, 0.9999700832904862);
+        /* opened_orders */
+        assert_eq!(resp.6, 1);
+        /* executed_orders */
+        assert_eq!(resp.7, 207);
+        /* avg_wait  */
+        assert_eq!(resp.8, 7909.144927536232);
+        /* score */
+        assert_eq!(resp.9, 8.262863144928028);
+        /* successful_ratio */
+        assert_eq!(resp.10, 1.0);
+    }
+}
