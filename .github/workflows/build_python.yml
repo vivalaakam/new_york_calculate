@@ -24,7 +24,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install numpy
+        pip install numpy requests
         pip install maturin
 
     - name: Build

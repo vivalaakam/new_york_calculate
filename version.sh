@@ -7,6 +7,16 @@ cargo test
 
 cargo fmt --all -- --check
 
+source venv/bin/activate
+
+cd ./python
+
+maturin build
+
+pytest
+
+cd ../
+
 current_version=$(cat Cargo.toml | grep 'version = "*"' | head -1 | awk -F = '{ print $2 }' | sed 's/[", ]//g')
 
 major=$(echo $current_version | awk -F . '{print $1}')

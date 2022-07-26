@@ -20,7 +20,7 @@ pub struct PyCandle {
     #[pyo3(get)]
     pub hist: Vec<f64>,
     #[pyo3(get)]
-    pub shape: Vec<i32>,
+    pub shape: Vec<usize>,
     #[pyo3(get)]
     pub max_profit_12: f64,
     #[pyo3(get)]
