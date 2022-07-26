@@ -8,6 +8,7 @@ use crate::py_candle::PyCandle;
 
 mod py_calculate;
 mod py_candle;
+mod py_calculate_result;
 
 #[pyfunction]
 pub fn get_candles(ticker: String, period: usize, start_time: u64, look_back: usize) -> Vec<PyCandle> {

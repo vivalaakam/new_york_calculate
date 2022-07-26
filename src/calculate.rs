@@ -101,26 +101,26 @@ mod tests {
         let resp = calculate.calculate(results);
 
         /* wallet */
-        assert_eq!(resp.0, 8.26311035000005);
+        assert_eq!(resp.wallet, 8.26311035000005);
         /* balance */
-        assert_eq!(resp.1, 2998.380237350004);
+        assert_eq!(resp.balance, 2998.380237350004);
         /* base_real */
-        assert_eq!(resp.2, 9.882000000000001);
+        assert_eq!(resp.base_real, 9.882000000000001);
         /* base_expected */
-        assert_eq!(resp.3, 9.972000000000001);
+        assert_eq!(resp.base_expected, 9.972000000000001);
         /* min_balance */
-        assert_eq!(resp.4, 2560.199113750004);
+        assert_eq!(resp.min_balance, 2560.199113750004);
         /* drawdown */
-        assert_eq!(resp.5, 0.9999700832904862);
+        assert_eq!(resp.drawdown, 0.9999700832904862);
         /* opened_orders */
-        assert_eq!(resp.6, 1);
+        assert_eq!(resp.opened_orders, 1);
         /* executed_orders */
-        assert_eq!(resp.7, 207);
+        assert_eq!(resp.executed_orders, 207);
         /* avg_wait  */
-        assert_eq!(resp.8, 7909.144927536232);
+        assert_eq!(resp.avg_wait, 7909.144927536232);
         /* score */
-        assert_eq!(resp.9, 8.262863144928028);
+        assert_eq!(resp.score, 8.262863144928028);
         /* successful_ratio */
-        assert_eq!(resp.10, 1.0);
+        assert_eq!(resp.successful_ratio, 1.0);
     }
 }
