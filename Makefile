@@ -4,9 +4,10 @@ test_core:
 	cargo fmt --all -- --check
 
 test_python:
-	source ./venv/bin/activate;
-	pip install -r ./python/requirements.txt;
-	cd ./python && maturin build;
-	cd ./python && pytest;
+	source ./venv/bin/activate; \
+	pip install -r ./python/requirements.txt; \
+	cd ./python; \
+	maturin build; \
+	pytest;
 
 test: test_core test_python
