@@ -169,7 +169,6 @@ pub fn perform_candles(
         let mut hist = Matrix::new(indicators.len(), look_back);
 
         for i in 0..indicators.len() {
-            println!("{:?}", indicators[i]);
             let data = indicators[i].get_data(&prev, look_back, &deltas_data);
             let _ = hist.add_column(i, data);
         }
