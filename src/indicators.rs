@@ -20,7 +20,7 @@ pub use vwma::vwma;
 pub use willr::willr;
 
 use crate::utils::range;
-use crate::Candle;
+use crate::{hl2, hlc3, hlcc4, ohlc4, Candle};
 
 mod ad;
 mod adx;
@@ -47,6 +47,15 @@ mod vwma;
 mod willr;
 
 #[derive(PartialEq, Debug)]
+pub enum IndicatorsInput {
+    Close,
+    HLC3,
+    HL2,
+    OHLC4,
+    HLCC4,
+}
+
+#[derive(PartialEq, Debug)]
 pub enum Indicators {
     Open24,
     High24,
@@ -63,6 +72,26 @@ pub enum Indicators {
     Trades24Delta,
     BuyBase24Delta,
     BuyQuote24Delta,
+    Ad,
+    Adx(usize),
+    Ao,
+    Atr(usize),
+    BBands(IndicatorsInput, usize, f64, usize),
+    Cci(usize),
+    Cpr(usize),
+    Ema(IndicatorsInput, usize),
+    Hma(IndicatorsInput, usize),
+    Macd(IndicatorsInput, usize, usize, usize, usize),
+    Mom(IndicatorsInput, usize),
+    Obv,
+    Rsi(IndicatorsInput, usize),
+    Sma(IndicatorsInput, usize),
+    Stoch(usize, usize, usize, usize),
+    StochRsi(IndicatorsInput, usize),
+    STrend(usize, usize),
+    Vpt,
+    Vwma(IndicatorsInput, usize),
+    WillR(usize),
 }
 
 impl Indicators {
@@ -163,8 +192,274 @@ impl Indicators {
                 .into_iter()
                 .map(|_| deltas[5].1 / deltas[5].0 - 1f64)
                 .collect::<Vec<_>>(),
+            Indicators::Ad => {
+                let mut high_data = vec![];
+                let mut low_data = vec![];
+                let mut close_data = vec![];
+                let mut volume_data = vec![];
+
+                for candle in candles {
+                    high_data.push(candle.high);
+                    low_data.push(candle.low);
+                    close_data.push(candle.close);
+                    volume_data.push(candle.volume);
+                }
+
+                let result = ad(high_data, low_data, close_data, volume_data);
+                result.unwrap().0
+            }
+            Indicators::Adx(period) => {
+                let mut high_data = vec![];
+                let mut low_data = vec![];
+
+                for candle in candles {
+                    high_data.push(candle.high);
+                    low_data.push(candle.low);
+                }
+
+                let result = adx(high_data, low_data, *period);
+
+                result.unwrap().0
+            }
+            Indicators::Ao => {
+                let mut high_data = vec![];
+                let mut low_data = vec![];
+
+                for candle in candles {
+                    high_data.push(candle.high);
+                    low_data.push(candle.low);
+                }
+
+                let result = ao(high_data, low_data);
+
+                result.unwrap().0
+            }
+            Indicators::Atr(period) => {
+                let mut high_data = vec![];
+                let mut low_data = vec![];
+                let mut close_data = vec![];
+
+                for candle in candles {
+                    high_data.push(candle.high);
+                    low_data.push(candle.low);
+                    close_data.push(candle.close);
+                }
+
+                let result = atr(high_data, low_data, close_data, *period);
+
+                result.unwrap().0
+            }
+            Indicators::BBands(input, period, stddev, output) => {
+                let raw_data = get_input(candles, input);
+                let result = bbands(raw_data, *period, *stddev).unwrap();
+
+                match output {
+                    0 => result.0,
+                    1 => result.1,
+                    2 => result.2,
+                    _ => result.0,
+                }
+            }
+            Indicators::Cci(period) => {
+                let mut high_data = vec![];
+                let mut low_data = vec![];
+                let mut close_data = vec![];
+
+                for candle in candles {
+                    high_data.push(candle.high);
+                    low_data.push(candle.low);
+                    close_data.push(candle.close);
+                }
+
+                let result = cci(high_data, low_data, close_data, *period);
+
+                result.unwrap().0
+            }
+            Indicators::Cpr(output) => {
+                let mut high_data = vec![];
+                let mut low_data = vec![];
+                let mut close_data = vec![];
+
+                for candle in candles {
+                    high_data.push(candle.high);
+                    low_data.push(candle.low);
+                    close_data.push(candle.close);
+                }
+
+                let result = cpr(high_data, low_data, close_data).unwrap();
+
+                match output {
+                    0 => result.0,
+                    1 => result.1,
+                    2 => result.2,
+                    _ => result.0,
+                }
+            }
+            Indicators::Ema(input, period) => {
+                let close_data = get_input(candles, input);
+                let result = ema(close_data, *period);
+                result.unwrap().0
+            }
+            Indicators::Hma(input, period) => {
+                let close_data = get_input(candles, input);
+                let result = hma(close_data, *period);
+                result.unwrap().0
+            }
+            Indicators::Macd(input, short_period, long_period, signal_period, output) => {
+                let raw_data = get_input(candles, input);
+
+                let result = macd(raw_data, *short_period, *long_period, *signal_period).unwrap();
+
+                match output {
+                    0 => result.0,
+                    1 => result.1,
+                    2 => result.2,
+                    _ => result.0,
+                }
+            }
+            Indicators::Mom(input, period) => {
+                let raw_data = get_input(candles, input);
+                let result = mom(raw_data, *period);
+                result.unwrap().0
+            }
+            Indicators::Obv => {
+                let mut close_data = vec![];
+                let mut volume_data = vec![];
+
+                for candle in candles {
+                    close_data.push(candle.close);
+                    volume_data.push(candle.volume);
+                }
+
+                let result = obv(close_data, volume_data);
+
+                result.unwrap().0
+            }
+            Indicators::Rsi(input, period) => {
+                let raw_data = get_input(candles, input);
+                let result = rsi(raw_data, *period);
+                result.unwrap().0
+            }
+            Indicators::Sma(input, period) => {
+                let close_data = get_input(candles, input);
+                let result = sma(close_data, *period);
+                result.unwrap().0
+            }
+            Indicators::Stoch(kperiod, kslow, dperiod, output) => {
+                let mut high_data = vec![];
+                let mut low_data = vec![];
+                let mut close_data = vec![];
+
+                for candle in candles {
+                    high_data.push(candle.high);
+                    low_data.push(candle.low);
+                    close_data.push(candle.close);
+                }
+                let result =
+                    stoch(high_data, low_data, close_data, *kperiod, *kslow, *dperiod).unwrap();
+
+                match output {
+                    0 => result.0,
+                    1 => result.1,
+                    _ => result.0,
+                }
+            }
+            Indicators::StochRsi(input, period) => {
+                let raw_data = get_input(candles, input);
+                let result = stochrsi(raw_data, *period);
+                result.unwrap().0
+            }
+            Indicators::STrend(atr_period, factor) => {
+                let mut high_data = vec![];
+                let mut low_data = vec![];
+                let mut close_data = vec![];
+
+                for candle in candles {
+                    high_data.push(candle.high);
+                    low_data.push(candle.low);
+                    close_data.push(candle.close);
+                }
+
+                let result = strend(high_data, low_data, close_data, *atr_period, *factor);
+
+                result.unwrap().0
+            }
+            Indicators::Vpt => {
+                let mut volume_data = vec![];
+                let mut close_data = vec![];
+
+                for candle in candles {
+                    close_data.push(candle.close);
+                    volume_data.push(candle.volume);
+                }
+
+                let result = vpt(close_data, volume_data);
+
+                result.unwrap().0
+            }
+            Indicators::Vwma(input, period) => {
+                let mut volume_data = vec![];
+                let input_data = get_input(candles, input);
+
+                for candle in candles {
+                    volume_data.push(candle.volume);
+                }
+
+                let result = vwma(input_data, volume_data, *period);
+
+                result.unwrap().0
+            }
+            Indicators::WillR(period) => {
+                let mut high_data = vec![];
+                let mut low_data = vec![];
+                let mut close_data = vec![];
+
+                for candle in candles {
+                    high_data.push(candle.high);
+                    low_data.push(candle.low);
+                    close_data.push(candle.close);
+                }
+
+                let result = willr(high_data, low_data, close_data, *period);
+
+                result.unwrap().0
+            }
         };
 
         data[data.len() - look_back..data.len()].to_vec()
     }
+}
+
+fn get_input(candles: &Vec<&Candle>, input: &IndicatorsInput) -> Vec<f64> {
+    let mut raw_data = vec![];
+
+    match input {
+        IndicatorsInput::Close => {
+            for candle in candles {
+                raw_data.push(candle.close);
+            }
+        }
+        IndicatorsInput::HLC3 => {
+            for candle in candles {
+                raw_data.push(hlc3!(candle.high, candle.low, candle.close));
+            }
+        }
+        IndicatorsInput::HL2 => {
+            for candle in candles {
+                raw_data.push(hl2!(candle.high, candle.low));
+            }
+        }
+        IndicatorsInput::OHLC4 => {
+            for candle in candles {
+                raw_data.push(ohlc4!(candle.open, candle.high, candle.low, candle.close));
+            }
+        }
+        IndicatorsInput::HLCC4 => {
+            for candle in candles {
+                raw_data.push(hlcc4!(candle.high, candle.low, candle.close));
+            }
+        }
+    }
+
+    raw_data
 }

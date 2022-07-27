@@ -14,6 +14,7 @@ pub struct Candle {
     pub shape: Vec<usize>,
     pub max_profit_12: f64,
     pub max_profit_24: f64,
+    pub score: f64,
 }
 
 impl Candle {
