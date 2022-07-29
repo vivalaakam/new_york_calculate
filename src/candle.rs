@@ -1,4 +1,7 @@
-#[derive(Clone, Default, Debug)]
+use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
+
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct Candle {
     pub start_time: u64,
     pub open: f64,
@@ -30,5 +33,25 @@ impl Candle {
             self.buy_base,
             self.buy_quote,
         ]
+    }
+}
+
+impl Ord for Candle {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.start_time.partial_cmp(&other.start_time).unwrap()
+    }
+}
+
+impl Eq for Candle {}
+
+impl PartialEq for Candle {
+    fn eq(&self, other: &Self) -> bool {
+        self.start_time == other.start_time
+    }
+}
+
+impl PartialOrd for Candle {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
