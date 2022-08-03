@@ -46,7 +46,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest]
-        ver: ['3.7', '3.8']
+        python: ["3.7", "3.8"]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -66,7 +66,7 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@v3
         with:
-          python-version: ${{ runner.ver }}
+          python-version: ${{ runner.python }}
           architecture: 'x64'
 
       - name: Install dependencies

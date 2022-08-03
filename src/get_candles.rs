@@ -17,8 +17,8 @@ pub async fn get_candles(
     let to_time = start_time + 86400 * 2;
 
     let mut candles_cache = vec![];
-
-    while from_time < to_time {
+    let mut has_candles = true;
+    while has_candles == true && from_time < to_time {
         let body = Client::new()
             .get(format!(
                 "https://api.binance.com/api/v3/klines?symbol={}&interval={}&startTime={}&limit=1000",
@@ -33,10 +33,13 @@ pub async fn get_candles(
             .into_iter()
             .map(|x| x.into()).collect::<Vec<Candle>>();
 
+        has_candles = false;
+
         for row in body {
             from_time = from_time.max(row.start_time);
 
             if from_time < to_time {
+                has_candles = true;
                 candles_cache.push(row);
             }
         }
