@@ -31,7 +31,8 @@ impl From<CalculateIter<'_>> for CalculateResult {
         let base_real = base_count * last_candle.close;
 
         for order in &calculate.executed_orders {
-            let time = (order.end_time - order.start_time) + (calculate.interval * 60 - 1);
+            let time = (order.end_time as i64 - order.start_time as i64)
+                + (calculate.interval as i64 * 60 - 1);
 
             avg_wait += time;
 
