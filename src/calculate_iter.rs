@@ -52,6 +52,14 @@ impl<'a> CalculateIter<'a> {
         }
     }
 
+    pub fn get_pointer(&self) -> usize {
+        self.pointer
+    }
+
+    pub fn get_candle(&self, pointer: usize) -> Option<&Candle> {
+        self.candles.get(pointer)
+    }
+
     pub fn next(&mut self) -> Result<(), &str> {
         let candle = self.candles.get(self.pointer);
 
