@@ -6,18 +6,17 @@ type CalculateActivate = Box<dyn Fn(&Candle, usize) -> CalculateCommand>;
 
 pub struct CalculateIter<'a> {
     candles: &'a Vec<Candle>,
-    stake: f64,
-    gain: f64,
     profit: f64,
     step_lot: f64,
     step_price: f64,
     pub(crate) interval: u64,
-
     pub(crate) balance: f64,
     pub(crate) opened_orders: Vec<Order>,
     pub(crate) executed_orders: Vec<Order>,
     pub(crate) wallet: f64,
     pub(crate) min_balance: f64,
+    pub(crate) mae_score: f64,
+    pub(crate) mae_counter: f64,
     pointer: usize,
     activate: CalculateActivate,
 }
@@ -26,8 +25,6 @@ impl<'a> CalculateIter<'a> {
     pub fn new(
         candles: &'a Vec<Candle>,
         balance: f64,
-        stake: f64,
-        gain: f64,
         profit: f64,
         interval: u64,
         step_lot: f64,
@@ -36,8 +33,6 @@ impl<'a> CalculateIter<'a> {
     ) -> Self {
         CalculateIter {
             candles,
-            stake,
-            gain,
             step_lot,
             step_price,
             profit,
@@ -46,6 +41,8 @@ impl<'a> CalculateIter<'a> {
             executed_orders: vec![],
             wallet: 0.0,
             min_balance: balance,
+            mae_score: 0.0,
+            mae_counter: 0.0,
             pointer: 0,
             activate,
             interval,
@@ -70,10 +67,21 @@ impl<'a> CalculateIter<'a> {
         let candle = candle.unwrap();
 
         match (self.activate)(candle, self.pointer) {
-            CalculateCommand::None => {}
-            CalculateCommand::BuyProfit => {
-                if self.balance > self.stake {
-                    let curr_stake = floor_to_nearest(self.stake / candle.open, self.step_lot);
+            CalculateCommand::Unknown => {}
+            CalculateCommand::None(score) => {
+                self.mae_counter += 1f64;
+                if candle.score != score {
+                    self.mae_score += 1f64;
+                }
+            }
+            CalculateCommand::BuyProfit(gain, stake, score) => {
+                self.mae_counter += 1f64;
+                if candle.score != score {
+                    self.mae_score += 1f64;
+                }
+
+                if self.balance > stake {
+                    let curr_stake = floor_to_nearest(stake / candle.open, self.step_lot);
                     let order_sum = curr_stake * candle.open;
                     self.balance -= order_sum;
                     self.balance -= order_sum * 0.001;
@@ -82,9 +90,12 @@ impl<'a> CalculateIter<'a> {
                         start_time: candle.start_time,
                         end_time: 0,
                         buy_price: candle.open,
-                        sell_price: ceil_to_nearest(candle.open * self.gain, self.step_price),
+                        sell_price: ceil_to_nearest(candle.open * gain, self.step_price),
                         qty: curr_stake,
                         commission: order_sum * 0.001,
+                        gain,
+                        stake,
+                        profit: 0.0,
                     });
 
                     self.opened_orders
@@ -115,6 +126,8 @@ impl<'a> CalculateIter<'a> {
 
             let profit_size =
                 ((order.sell_price - order.buy_price) * order.qty - order.commission) * self.profit;
+
+            order.profit = profit_size;
 
             self.balance -= profit_size;
             self.wallet += profit_size;

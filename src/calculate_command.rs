@@ -1,4 +1,7 @@
 pub enum CalculateCommand {
-    None,
-    BuyProfit,
+    Unknown,
+    /* score */
+    None(f64),
+    /* gain, stake, score */
+    BuyProfit(f64, f64, f64),
 }

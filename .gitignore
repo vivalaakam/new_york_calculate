@@ -8,3 +8,4 @@ lib
 new_york_calculate.*.so
 __pycache__
 *.pickle
+tmp/*.cbor

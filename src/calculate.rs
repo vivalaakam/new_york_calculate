@@ -36,22 +36,22 @@ impl Calculate {
     }
 
     pub fn calculate(&self, results: Vec<u8>) -> CalculateResult {
+        let gain = self.gain;
+        let stake = self.stake;
         let mut calculate_iter = CalculateIter::new(
             &self.candles,
             self.initial_balance,
-            self.stake,
-            self.gain,
             self.profit,
             self.interval,
             self.step_lot,
             self.step_price,
             Box::new(move |_candle, ind| match results.get(ind) {
-                None => CalculateCommand::None,
+                None => CalculateCommand::None(0f64),
                 Some(val) => {
                     if *val == 0 {
-                        CalculateCommand::None
+                        CalculateCommand::None(0f64)
                     } else {
-                        CalculateCommand::BuyProfit
+                        CalculateCommand::BuyProfit(gain, stake, 1f64)
                     }
                 }
             }),

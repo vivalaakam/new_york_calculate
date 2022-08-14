@@ -1,6 +1,6 @@
 [package]
 name = "new_york_calculate"
-version = "0.0.43"
+version = "0.0.44"
 authors = ["Andrey Makarov <viva.la.akam@gmail.com>"]
 edition = "2018"
 

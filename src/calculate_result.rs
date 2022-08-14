@@ -1,6 +1,8 @@
 use crate::calculate_iter::CalculateIter;
 use crate::score::get_score;
+use std::collections::{HashMap, HashSet};
 
+#[derive(Debug)]
 pub struct CalculateResult {
     pub wallet: f64,
     pub balance: f64,
@@ -12,7 +14,10 @@ pub struct CalculateResult {
     pub executed_orders: usize,
     pub avg_wait: f64,
     pub score: f64,
+    pub mae: f64,
     pub successful_ratio: f64,
+    pub gain_ratio: HashMap<String, f64>,
+    pub profit_ratio: HashMap<String, f64>,
 }
 
 impl From<CalculateIter<'_>> for CalculateResult {
@@ -30,14 +35,38 @@ impl From<CalculateIter<'_>> for CalculateResult {
 
         let base_real = base_count * last_candle.close;
 
+        let mut ratios = HashSet::new();
+        let mut gain_ratio = HashMap::new();
+        let mut profit_ratio = HashMap::new();
+
         for order in &calculate.executed_orders {
             let time = (order.end_time - order.start_time) + (calculate.interval * 60 - 1);
+            ratios.insert(order.gain.to_string());
+            gain_ratio
+                .entry(order.gain.to_string())
+                .and_modify(|counter| *counter += 1.0)
+                .or_insert(1.0);
+            profit_ratio
+                .entry(order.gain.to_string())
+                .and_modify(|counter| *counter += order.profit)
+                .or_insert(order.profit);
 
             avg_wait += time;
 
             if time < 12 * 60 * 60 {
                 successful_orders += 1
             }
+        }
+
+        for value in ratios {
+            gain_ratio
+                .entry(value.to_string())
+                .and_modify(|counter| *counter /= calculate.executed_orders.len() as f64)
+                .or_insert(0.0);
+            profit_ratio
+                .entry(value.to_string())
+                .and_modify(|counter| *counter /= calculate.wallet)
+                .or_insert(0.0);
         }
 
         let drawdown = if calculate.opened_orders.len() > 0 {
@@ -69,7 +98,10 @@ impl From<CalculateIter<'_>> for CalculateResult {
             executed_orders: calculate.executed_orders.len(),
             avg_wait,
             score: get_score(calculate.wallet, drawdown, successful_ratio),
+            mae: (calculate.mae_counter - calculate.mae_score) / calculate.mae_counter,
             successful_ratio,
+            gain_ratio,
+            profit_ratio,
         }
     }
 }

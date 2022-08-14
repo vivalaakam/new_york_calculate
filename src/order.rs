@@ -6,4 +6,7 @@ pub struct Order {
     pub sell_price: f64,
     pub qty: f64,
     pub commission: f64,
+    pub gain: f64,
+    pub stake: f64,
+    pub profit: f64,
 }
