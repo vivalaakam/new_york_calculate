@@ -1,6 +1,6 @@
 [package]
 name = "new_york_calculate"
-version = "0.0.44"
+version = "0.0.45"
 authors = ["Andrey Makarov <viva.la.akam@gmail.com>"]
 edition = "2018"
 
@@ -9,9 +9,9 @@ edition = "2018"
 [dependencies]
 log = "0.4"
 rayon = "1.5"
+new_york_utils = "0.1"
 pyo3 = { version = "0.16", features = ["extension-module"] }
 tokio = { version = "1.19" , features = ["full"]}
-
 
 [lib]
 name = "new_york_calculate"

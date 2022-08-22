@@ -1,4 +1,4 @@
-name: Build rust package app
+name: Build package
 
 on:
   workflow_dispatch:

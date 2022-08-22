@@ -2,7 +2,7 @@ use crate::calculate_iter::CalculateIter;
 use crate::score::get_score;
 use std::collections::{HashMap, HashSet};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct CalculateResult {
     pub wallet: f64,
     pub balance: f64,
