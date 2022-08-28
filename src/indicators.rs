@@ -174,23 +174,23 @@ impl Indicators {
                 .collect::<Vec<_>>(),
             Indicators::Volume24Delta => candles
                 .into_iter()
-                .map(|_| deltas[1].1 / deltas[1].0 - 1f64)
+                .map(|_| (deltas[1].1 / deltas[1].0 - 1f64).min(10000f64))
                 .collect::<Vec<_>>(),
             Indicators::QuoteAsset24Delta => candles
                 .into_iter()
-                .map(|_| deltas[2].1 / deltas[2].0 - 1f64)
+                .map(|_| (deltas[2].1 / deltas[2].0 - 1f64).min(10000f64))
                 .collect::<Vec<_>>(),
             Indicators::Trades24Delta => candles
                 .into_iter()
-                .map(|_| deltas[3].1 / deltas[3].0 - 1f64)
+                .map(|_| (deltas[3].1 / deltas[3].0 - 1f64).min(10000f64))
                 .collect::<Vec<_>>(),
             Indicators::BuyBase24Delta => candles
                 .into_iter()
-                .map(|_| deltas[4].1 / deltas[4].0 - 1f64)
+                .map(|_| (deltas[4].1 / deltas[4].0 - 1f64).min(10000f64))
                 .collect::<Vec<_>>(),
             Indicators::BuyQuote24Delta => candles
                 .into_iter()
-                .map(|_| deltas[5].1 / deltas[5].0 - 1f64)
+                .map(|_| (deltas[5].1 / deltas[5].0 - 1f64).min(10000f64))
                 .collect::<Vec<_>>(),
             Indicators::Ad => {
                 let mut high_data = vec![];
