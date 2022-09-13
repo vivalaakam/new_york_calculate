@@ -45,7 +45,7 @@ impl Calculate {
             self.interval,
             self.step_lot,
             self.step_price,
-            Box::new(move |_candle, ind| match results.get(ind) {
+            Box::new(move |_candle, ind, _stats| match results.get(ind) {
                 None => CalculateCommand::None(0f64),
                 Some(val) => {
                     if *val == 0 {

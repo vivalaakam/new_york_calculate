@@ -34,7 +34,7 @@ async fn main() {
     keys.push(from);
 
     for key in keys {
-        let new_candles = get_candles_with_cache("XRPUSDT".to_string(), 15, key, 12, None).await;
+        let new_candles = get_candles_with_cache("XRPBUSD".to_string(), 15, key, 12, None).await;
         candles = [candles, new_candles].concat();
     }
 
@@ -53,10 +53,12 @@ async fn main() {
                 15,
                 1f64,
                 0.0001f64,
-                Box::new(move |candle, ind| {
+                Box::new(move |candle, ind, stats| {
                     if ind >= target {
                         return CalculateCommand::Unknown;
                     }
+
+                    println!("{:?}", stats);
 
                     for j in i1..i2 + 1 {
                         if candle.max_profit[4 - j] > targets[j] {

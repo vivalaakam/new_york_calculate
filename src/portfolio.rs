@@ -8,7 +8,7 @@ pub struct Portfolio {
     initial_balance: f64,
     stake: f64,
     step_lot: f64,
-    step_price: f64,
+    // step_price: f64,
     step_sum: f64,
     fee: f64,
 }
@@ -21,7 +21,7 @@ impl Portfolio {
             stake: stake.unwrap_or(10f64),
             fee: 0.001,
             step_lot: 1f64,
-            step_price: 0.0001,
+            // step_price: 0.0001,
             step_sum: 0.0000001,
         }
     }

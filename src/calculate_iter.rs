@@ -2,7 +2,16 @@ use crate::calculate_command::CalculateCommand;
 use crate::utils::{ceil_to_nearest, floor_to_nearest};
 use crate::{Candle, Order};
 
-type CalculateActivate = Box<dyn Fn(&Candle, usize) -> CalculateCommand>;
+#[derive(Debug)]
+pub struct CalculateStats {
+    pub balance: f64,
+    pub orders: usize,
+    pub count: f64,
+    pub expected: f64,
+    pub real: f64,
+}
+
+type CalculateActivate = Box<dyn Fn(&Candle, usize, &CalculateStats) -> CalculateCommand>;
 
 pub struct CalculateIter<'a> {
     candles: &'a Vec<Candle>,
@@ -19,6 +28,7 @@ pub struct CalculateIter<'a> {
     pub(crate) mae_counter: f64,
     pointer: usize,
     activate: CalculateActivate,
+    stats: CalculateStats,
 }
 
 impl<'a> CalculateIter<'a> {
@@ -29,7 +39,7 @@ impl<'a> CalculateIter<'a> {
         interval: u64,
         step_lot: f64,
         step_price: f64,
-        activate: Box<dyn Fn(&Candle, usize) -> CalculateCommand>,
+        activate: Box<dyn Fn(&Candle, usize, &CalculateStats) -> CalculateCommand>,
     ) -> Self {
         CalculateIter {
             candles,
@@ -46,6 +56,13 @@ impl<'a> CalculateIter<'a> {
             pointer: 0,
             activate,
             interval,
+            stats: CalculateStats {
+                orders: 0,
+                count: 0.0,
+                expected: 0.0,
+                real: 0.0,
+                balance: 0.0,
+            },
         }
     }
 
@@ -66,7 +83,10 @@ impl<'a> CalculateIter<'a> {
 
         let candle = candle.unwrap();
 
-        match (self.activate)(candle, self.pointer) {
+        self.stats.real = self.stats.count * candle.open;
+        self.stats.balance = self.balance;
+
+        match (self.activate)(candle, self.pointer, &self.stats) {
             CalculateCommand::Unknown => {}
             CalculateCommand::None(score) => {
                 self.mae_counter += 1f64;
@@ -86,7 +106,7 @@ impl<'a> CalculateIter<'a> {
                     self.balance -= order_sum;
                     self.balance -= order_sum * 0.001;
 
-                    self.opened_orders.push(Order {
+                    let order = Order {
                         start_time: candle.start_time,
                         end_time: 0,
                         buy_price: candle.open,
@@ -96,7 +116,13 @@ impl<'a> CalculateIter<'a> {
                         gain,
                         stake,
                         profit: 0.0,
-                    });
+                    };
+
+                    self.stats.orders += 1;
+                    self.stats.count += order.qty;
+                    self.stats.expected += order.sell_price * order.qty;
+
+                    self.opened_orders.push(order);
 
                     self.opened_orders
                         .sort_by(|a, b| b.sell_price.partial_cmp(&a.sell_price).unwrap());
@@ -131,6 +157,10 @@ impl<'a> CalculateIter<'a> {
 
             self.balance -= profit_size;
             self.wallet += profit_size;
+
+            self.stats.orders -= 1;
+            self.stats.count -= order.qty;
+            self.stats.expected -= order.sell_price * order.qty;
 
             self.executed_orders.push(order);
         }
