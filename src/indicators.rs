@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 pub use ad::ad;
 pub use adx::adx;
 pub use ao::ao;
@@ -46,7 +48,7 @@ mod vpt;
 mod vwma;
 mod willr;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub enum IndicatorsInput {
     Close,
     HLC3,
@@ -55,7 +57,7 @@ pub enum IndicatorsInput {
     HLCC4,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub enum Indicators {
     Open24,
     High24,

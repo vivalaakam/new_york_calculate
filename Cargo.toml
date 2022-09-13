@@ -1,6 +1,6 @@
 [package]
 name = "new_york_calculate_core"
-version = "0.0.47"
+version = "0.0.48"
 authors = ["Andrey Makarov <viva.la.akam@gmail.com>"]
 edition = "2018"
 description = "Library for calculation some things"
