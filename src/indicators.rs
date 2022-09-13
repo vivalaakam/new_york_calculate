@@ -48,7 +48,7 @@ mod vpt;
 mod vwma;
 mod willr;
 
-#[derive(PartialEq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub enum IndicatorsInput {
     Close,
     HLC3,
@@ -57,7 +57,7 @@ pub enum IndicatorsInput {
     HLCC4,
 }
 
-#[derive(PartialEq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub enum Indicators {
     Open24,
     High24,
