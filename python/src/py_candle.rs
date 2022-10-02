@@ -8,6 +8,8 @@ pub struct PyCandle {
     #[pyo3(get)]
     pub start_time: u64,
     #[pyo3(get)]
+    pub end_time: u64,
+    #[pyo3(get)]
     pub open: f64,
     #[pyo3(get)]
     pub high: f64,
@@ -31,6 +33,7 @@ impl Into<Candle> for PyCandle {
     fn into(self) -> Candle {
         Candle {
             start_time: self.start_time,
+            end_time: self.end_time,
             open: self.open,
             high: self.high,
             low: self.low,
@@ -45,6 +48,7 @@ impl Into<PyCandle> for Candle {
     fn into(self) -> PyCandle {
         PyCandle {
             start_time: self.start_time,
+            end_time: self.end_time,
             open: self.open,
             high: self.high,
             low: self.low,
@@ -61,9 +65,10 @@ impl Into<PyCandle> for Candle {
 #[pymethods]
 impl PyCandle {
     #[new]
-    pub fn new(params: (u64, f64, f64, f64, f64, f64)) -> Self {
+    pub fn new(params: (u64, f64, f64, f64, f64, f64, u64)) -> Self {
         PyCandle {
             start_time: params.0,
+            end_time: params.6,
             open: params.1,
             high: params.2,
             low: params.3,

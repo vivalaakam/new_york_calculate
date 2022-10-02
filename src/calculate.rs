@@ -11,7 +11,6 @@ pub struct Calculate {
     profit: f64,
     step_lot: f64,
     step_price: f64,
-    interval: u64,
 }
 
 impl Calculate {
@@ -21,7 +20,6 @@ impl Calculate {
         stake: Option<f64>,
         gain: Option<f64>,
         profit: Option<f64>,
-        interval: Option<u64>,
     ) -> Self {
         Calculate {
             candles,
@@ -31,7 +29,6 @@ impl Calculate {
             step_lot: 1f64,
             step_price: 0.0001f64,
             profit: profit.unwrap_or(0.5f64),
-            interval: interval.unwrap_or(15),
         }
     }
 
@@ -42,7 +39,6 @@ impl Calculate {
             &self.candles,
             self.initial_balance,
             self.profit,
-            self.interval,
             self.step_lot,
             self.step_price,
             Box::new(move |_candle, ind, _stats| match results.get(ind) {
@@ -96,7 +92,7 @@ mod tests {
             .map(|candle| if candle.max_profit_12 > 1.0 { 1 } else { 0 })
             .collect::<Vec<u8>>();
 
-        let calculate = Calculate::new(candles, None, None, None, None, None);
+        let calculate = Calculate::new(candles, None, None, None, None);
 
         let resp = calculate.calculate(results);
 
@@ -117,7 +113,7 @@ mod tests {
         /* executed_orders */
         assert_eq!(resp.executed_orders, 207);
         /* avg_wait  */
-        assert_eq!(resp.avg_wait, 7909.144927536232);
+        assert_eq!(resp.avg_wait, 7309.144927536232);
         /* score */
         assert_eq!(resp.score, 8.262863144928028);
         /* successful_ratio */

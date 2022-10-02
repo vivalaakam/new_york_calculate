@@ -4,6 +4,7 @@ use std::cmp::Ordering;
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct Candle {
     pub start_time: u64,
+    pub end_time: u64,
     pub open: f64,
     pub high: f64,
     pub low: f64,
@@ -22,6 +23,7 @@ pub struct Candle {
     pub max_profit_12: f64,
     pub max_profit_24: f64,
     pub score: f64,
+    pub interval: u64,
 }
 
 impl Candle {

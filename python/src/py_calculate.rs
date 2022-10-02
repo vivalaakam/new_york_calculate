@@ -19,7 +19,6 @@ impl PyCalculate {
         stake: Option<f64>,
         gain: Option<f64>,
         profit: Option<f64>,
-        interval: Option<u64>,
     ) -> Self {
         let mut candles = candles
             .extract::<Vec<PyCandle>>()
@@ -31,7 +30,7 @@ impl PyCalculate {
         candles.sort_by(|a, b| a.start_time.partial_cmp(&b.start_time).unwrap());
 
         PyCalculate {
-            instance: Calculate::new(candles, initial_balance, stake, gain, profit, interval),
+            instance: Calculate::new(candles, initial_balance, stake, gain, profit),
         }
     }
 

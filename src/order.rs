@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Order {
     pub start_time: u64,
     pub end_time: u64,

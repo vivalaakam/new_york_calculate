@@ -50,7 +50,6 @@ async fn main() {
                 &candles,
                 3000f64,
                 0.5,
-                15,
                 1f64,
                 0.0001f64,
                 Box::new(move |candle, ind, stats| {
@@ -62,11 +61,11 @@ async fn main() {
 
                     for j in i1..i2 + 1 {
                         if candle.max_profit[4 - j] > targets[j] {
-                            return CalculateCommand::BuyProfit(gain[j], stake[j], 1f64);
+                            return CalculateCommand::BuyProfit(gain[j], stake[j]);
                         }
                     }
 
-                    CalculateCommand::None(0f64)
+                    CalculateCommand::None
                 }),
             );
 

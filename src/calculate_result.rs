@@ -1,6 +1,7 @@
+use std::collections::{HashMap, HashSet};
+
 use crate::calculate_iter::CalculateIter;
 use crate::score::get_score;
-use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Default)]
 pub struct CalculateResult {
@@ -21,11 +22,11 @@ pub struct CalculateResult {
 
 impl From<CalculateIter<'_>> for CalculateResult {
     fn from(calculate: CalculateIter) -> Self {
+        let executed_orders = calculate.agent.get_executed_orders();
         let mut base_count = 0f64;
         let mut base_expected = 0f64;
-        let mut avg_wait = 0;
-        let mut successful_orders = 0;
-        for order in &calculate.opened_orders {
+
+        for order in &calculate.sell_orders {
             base_count += order.qty;
             base_expected += order.qty * order.sell_price;
         }
@@ -38,8 +39,7 @@ impl From<CalculateIter<'_>> for CalculateResult {
         let mut gain_ratio = HashMap::new();
         let mut profit_ratio = HashMap::new();
 
-        for order in &calculate.executed_orders {
-            let time = (order.end_time - order.start_time) + (calculate.interval * 60 - 1);
+        for order in &executed_orders {
             ratios.insert(order.gain.to_string());
             gain_ratio
                 .entry(order.gain.to_string())
@@ -49,55 +49,42 @@ impl From<CalculateIter<'_>> for CalculateResult {
                 .entry(order.gain.to_string())
                 .and_modify(|counter| *counter += order.profit)
                 .or_insert(order.profit);
-
-            avg_wait += time;
-
-            if time < 12 * 60 * 60 {
-                successful_orders += 1
-            }
         }
 
         for value in ratios {
             gain_ratio
                 .entry(value.to_string())
-                .and_modify(|counter| *counter /= calculate.executed_orders.len() as f64)
+                .and_modify(|counter| *counter /= executed_orders.len() as f64)
                 .or_insert(0.0);
             profit_ratio
                 .entry(value.to_string())
-                .and_modify(|counter| *counter /= calculate.wallet)
+                .and_modify(|counter| *counter /= calculate.agent.get_wallet())
                 .or_insert(0.0);
         }
 
-        let drawdown = if calculate.opened_orders.len() > 0 {
-            (base_real + calculate.balance) / (base_expected + calculate.balance)
+        let drawdown = if calculate.sell_orders.len() > 0 {
+            (base_real + calculate.agent.get_balance())
+                / (base_expected + calculate.agent.get_balance())
         } else {
             1f64
         };
 
-        let avg_wait = if calculate.executed_orders.len() > 0 {
-            avg_wait as f64 / calculate.executed_orders.len() as f64
-        } else {
-            0f64
-        };
-
-        let successful_ratio = if calculate.executed_orders.len() > 0 {
-            successful_orders as f64 / calculate.executed_orders.len() as f64
-        } else {
-            0f64
-        };
-
         CalculateResult {
-            wallet: calculate.wallet,
-            balance: calculate.balance,
+            wallet: calculate.agent.get_wallet(),
+            balance: calculate.agent.get_balance(),
             base_real,
             base_expected,
-            min_balance: calculate.min_balance,
+            min_balance: calculate.agent.get_min_balance(),
             drawdown,
-            opened_orders: calculate.opened_orders.len(),
-            executed_orders: calculate.executed_orders.len(),
-            avg_wait,
-            score: get_score(calculate.wallet, drawdown, successful_ratio),
-            successful_ratio,
+            opened_orders: calculate.agent.get_orders(),
+            executed_orders: calculate.agent.get_executed_orders().len(),
+            avg_wait: calculate.agent.get_average_waiting(),
+            score: get_score(
+                calculate.agent.get_wallet(),
+                drawdown,
+                calculate.agent.get_successful_ratio(),
+            ),
+            successful_ratio: calculate.agent.get_successful_ratio(),
             gain_ratio,
             profit_ratio,
         }

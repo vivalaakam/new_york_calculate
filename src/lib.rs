@@ -1,4 +1,5 @@
 pub use calculate::Calculate;
+pub use calculate_agent::CalculateAgent;
 pub use calculate_command::CalculateCommand;
 pub use calculate_iter::CalculateIter;
 pub use calculate_result::CalculateResult;
@@ -10,9 +11,12 @@ pub use order::Order;
 pub use portfolio::Portfolio;
 
 mod calculate;
+mod calculate_activate;
+mod calculate_agent;
 mod calculate_command;
 mod calculate_iter;
 mod calculate_result;
+mod calculate_stats;
 mod candle;
 mod candle_response;
 mod get_candles;
