@@ -1,8 +1,7 @@
 #[derive(Clone)]
 pub enum CalculateCommand {
     Unknown,
-    /* score */
-    None(f64),
-    /* gain, stake, score */
-    BuyProfit(f64, f64, f64),
+    None,
+    /* profit, stake */
+    BuyProfit(f64, f64),
 }

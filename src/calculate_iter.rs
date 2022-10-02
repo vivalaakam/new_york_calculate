@@ -24,8 +24,6 @@ pub struct CalculateIter<'a> {
     pub(crate) executed_orders: Vec<Order>,
     pub(crate) wallet: f64,
     pub(crate) min_balance: f64,
-    pub(crate) mae_score: f64,
-    pub(crate) mae_counter: f64,
     pointer: usize,
     activate: CalculateActivate,
     stats: CalculateStats,
@@ -51,8 +49,6 @@ impl<'a> CalculateIter<'a> {
             executed_orders: vec![],
             wallet: 0.0,
             min_balance: balance,
-            mae_score: 0.0,
-            mae_counter: 0.0,
             pointer: 0,
             activate,
             interval,
@@ -87,19 +83,8 @@ impl<'a> CalculateIter<'a> {
         self.stats.balance = self.balance;
 
         match (self.activate)(candle, self.pointer, &self.stats) {
-            CalculateCommand::Unknown => {}
-            CalculateCommand::None(score) => {
-                self.mae_counter += 1f64;
-                if candle.score != score {
-                    self.mae_score += 1f64;
-                }
-            }
-            CalculateCommand::BuyProfit(gain, stake, score) => {
-                self.mae_counter += 1f64;
-                if candle.score != score {
-                    self.mae_score += 1f64;
-                }
-
+            CalculateCommand::Unknown | CalculateCommand::None => {}
+            CalculateCommand::BuyProfit(gain, stake) => {
                 if self.balance > stake {
                     let curr_stake = floor_to_nearest(stake / candle.open, self.step_lot);
                     let order_sum = curr_stake * candle.open;

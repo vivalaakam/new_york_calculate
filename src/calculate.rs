@@ -46,12 +46,12 @@ impl Calculate {
             self.step_lot,
             self.step_price,
             Box::new(move |_candle, ind, _stats| match results.get(ind) {
-                None => CalculateCommand::None(0f64),
+                None => CalculateCommand::None,
                 Some(val) => {
                     if *val == 0 {
-                        CalculateCommand::None(0f64)
+                        CalculateCommand::None
                     } else {
-                        CalculateCommand::BuyProfit(gain, stake, 1f64)
+                        CalculateCommand::BuyProfit(gain, stake)
                     }
                 }
             }),
