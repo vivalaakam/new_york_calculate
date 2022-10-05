@@ -9,4 +9,5 @@ pub struct Order {
     pub gain: f64,
     pub stake: f64,
     pub profit: f64,
+    pub agent: usize,
 }

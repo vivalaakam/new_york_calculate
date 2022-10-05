@@ -1,5 +1,5 @@
 use crate::calculate_stats::CalculateStats;
-use crate::{CalculateCommand, Candle};
+use crate::{CalculateCommand, CalculateResult, Candle};
 
 pub trait CalculateActivate {
     fn activate(
@@ -8,4 +8,6 @@ pub trait CalculateActivate {
         position: usize,
         stats: &CalculateStats,
     ) -> CalculateCommand;
+
+    fn on_end(&mut self, result: CalculateResult);
 }

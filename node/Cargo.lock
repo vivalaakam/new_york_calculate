@@ -490,7 +490,7 @@ dependencies = [
 
 [[package]]
 name = "new_york_calculate"
-version = "0.0.51"
+version = "0.0.52"
 dependencies = [
  "neon",
  "new_york_calculate_core",
@@ -498,7 +498,7 @@ dependencies = [
 
 [[package]]
 name = "new_york_calculate_core"
-version = "0.0.51"
+version = "0.0.52"
 dependencies = [
  "env_logger",
  "log",
@@ -888,9 +888,9 @@ dependencies = [
 
 [[package]]
 name = "smallvec"
-version = "1.9.0"
+version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fd0db749597d91ff862fd1d55ea87f7855a744a8425a64695b6fca237d1dad1"
+checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 
 [[package]]
 name = "socket2"

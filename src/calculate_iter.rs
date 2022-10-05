@@ -2,7 +2,7 @@ use crate::calculate_activate::CalculateActivate;
 use crate::calculate_agent::CalculateAgent;
 use crate::calculate_command::CalculateCommand;
 use crate::calculate_stats::CalculateStats;
-use crate::{Candle, Order};
+use crate::{CalculateResult, Candle, Order};
 
 type CalculateActivateLocal = Box<dyn Fn(&Candle, usize, &CalculateStats) -> CalculateCommand>;
 
@@ -18,6 +18,7 @@ pub struct CalculateIter<'a> {
 
 pub struct CalculateIterActivate {
     activate: CalculateActivateLocal,
+    result: Option<CalculateResult>,
 }
 
 impl CalculateActivate for CalculateIterActivate {
@@ -28,6 +29,10 @@ impl CalculateActivate for CalculateIterActivate {
         stats: &CalculateStats,
     ) -> CalculateCommand {
         (self.activate)(candle, position, stats)
+    }
+
+    fn on_end(&mut self, result: CalculateResult) {
+        self.result = Some(result);
     }
 }
 
@@ -40,7 +45,15 @@ impl<'a> CalculateIter<'a> {
         step_price: f64,
         activate: Box<dyn Fn(&Candle, usize, &CalculateStats) -> CalculateCommand>,
     ) -> Self {
-        let agent = CalculateAgent::new(balance, CalculateIterActivate { activate });
+        let agent = CalculateAgent::new(
+            0,
+            balance,
+            false,
+            Box::new(CalculateIterActivate {
+                activate,
+                result: None,
+            }),
+        );
 
         CalculateIter {
             candles,
@@ -65,6 +78,7 @@ impl<'a> CalculateIter<'a> {
         let candle = self.candles.get(self.pointer);
 
         if candle.is_none() {
+            self.agent.on_end();
             return Err("not found");
         }
 
@@ -105,14 +119,10 @@ impl<'a> CalculateIter<'a> {
             self.agent.buy_profit_close(order, candle, self.profit);
         }
 
-        self.agent.on_end_round();
+        self.agent.on_end_round(candle.close);
 
         self.pointer += 1;
 
         Ok(())
-    }
-
-    pub fn last_candle(&self) -> Option<&Candle> {
-        self.candles.last()
     }
 }

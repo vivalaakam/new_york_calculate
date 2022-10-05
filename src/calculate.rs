@@ -103,7 +103,7 @@ mod tests {
         /* base_real */
         assert_eq!(resp.base_real, 9.882000000000001);
         /* base_expected */
-        assert_eq!(resp.base_expected, 9.972000000000001);
+        assert_eq!(resp.base_expected, 9.97200000000015);
         /* min_balance */
         assert_eq!(resp.min_balance, 2560.199113750004);
         /* drawdown */
