@@ -20,13 +20,9 @@ impl CalculateActivate for &CalculateIterActivate {
     fn activate(
         &self,
         candle: &Candle,
-        position: usize,
+        _position: usize,
         _stats: &CalculateStats,
     ) -> CalculateCommand {
-        if position >= self.target {
-            return CalculateCommand::None;
-        }
-
         if (candle.max_profit.last().unwrap_or(&0f64) / 100f64) + 1f64 > self.gain {
             return CalculateCommand::BuyProfit(self.gain, self.profit);
         }
@@ -100,7 +96,7 @@ async fn main() {
         agents.push(agent);
     }
 
-    let mut calculate_iter = CalculateAgentIter::new(&candles, 0.5, 1f64, 0.0001f64, agents);
+    let mut calculate_iter = CalculateAgentIter::new(&candles, 0.5, 1f64, 0.0001f64, 288, agents);
 
     let mut cont = Ok(());
 

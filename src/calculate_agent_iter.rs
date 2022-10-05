@@ -8,6 +8,7 @@ pub struct CalculateAgentIter<'a, T: CalculateActivate> {
     step_price: f64,
     sell_orders: Vec<Order>,
     pointer: usize,
+    check_period: usize,
     agents: Vec<CalculateAgent<T>>,
 }
 
@@ -20,6 +21,7 @@ where
         profit: f64,
         step_lot: f64,
         step_price: f64,
+        check_period: usize,
         agents: Vec<CalculateAgent<T>>,
     ) -> Self {
         CalculateAgentIter {
@@ -29,6 +31,7 @@ where
             profit,
             sell_orders: vec![],
             pointer: 0,
+            check_period,
             agents,
         }
     }
@@ -53,17 +56,24 @@ where
 
         let candle = candle.unwrap();
 
-        for agent in self.agents.iter_mut() {
-            match agent.activate(candle, self.pointer) {
-                CalculateCommand::Unknown | CalculateCommand::None => {}
-                CalculateCommand::BuyProfit(gain, stake) => {
-                    match agent.buy_profit_open(candle, stake, gain, self.step_lot, self.step_price)
-                    {
-                        Some(order) => self.sell_orders.push(order),
-                        None => {}
+        if self.pointer < self.candles.len() - self.check_period {
+            for agent in self.agents.iter_mut() {
+                match agent.activate(candle, self.pointer) {
+                    CalculateCommand::Unknown | CalculateCommand::None => {}
+                    CalculateCommand::BuyProfit(gain, stake) => {
+                        match agent.buy_profit_open(
+                            candle,
+                            stake,
+                            gain,
+                            self.step_lot,
+                            self.step_price,
+                        ) {
+                            Some(order) => self.sell_orders.push(order),
+                            None => {}
+                        }
                     }
-                }
-            };
+                };
+            }
         }
 
         self.sell_orders
