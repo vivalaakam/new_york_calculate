@@ -503,7 +503,7 @@ dependencies = [
 
 [[package]]
 name = "new_york_calculate"
-version = "0.0.55"
+version = "0.0.56"
 dependencies = [
  "log",
  "new_york_calculate_core",
@@ -515,7 +515,7 @@ dependencies = [
 
 [[package]]
 name = "new_york_calculate_core"
-version = "0.0.55"
+version = "0.0.56"
 dependencies = [
  "env_logger",
  "log",
