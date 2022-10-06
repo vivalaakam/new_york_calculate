@@ -96,7 +96,8 @@ async fn main() {
         agents.push(agent);
     }
 
-    let mut calculate_iter = CalculateAgentIter::new(&candles, 0.5, 1f64, 0.0001f64, 288, agents);
+    let mut calculate_iter =
+        CalculateAgentIter::new(&candles, 0.5, 1f64, 0.0001f64, 288, &mut agents);
 
     let mut cont = Ok(());
 

@@ -9,7 +9,7 @@ pub struct CalculateAgentIter<'a, T: CalculateActivate> {
     sell_orders: Vec<Order>,
     pointer: usize,
     check_period: usize,
-    agents: Vec<CalculateAgent<T>>,
+    agents: &'a mut Vec<CalculateAgent<T>>,
 }
 
 impl<'a, T> CalculateAgentIter<'a, T>
@@ -22,7 +22,7 @@ where
         step_lot: f64,
         step_price: f64,
         check_period: usize,
-        agents: Vec<CalculateAgent<T>>,
+        agents: &'a mut Vec<CalculateAgent<T>>,
     ) -> Self {
         CalculateAgentIter {
             candles,
