@@ -1,6 +1,6 @@
 use crate::calculate_iter::CalculateIter;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct CalculateResult {
     pub wallet: f64,
     pub balance: f64,
