@@ -9,3 +9,8 @@ new_york_calculate.*.so
 __pycache__
 *.pickle
 tmp/*.cbor
+.build
+/swift/NewYorkCalculateRust.xcframework/
+/swift/libnew_york_calculate_macos.a
+/swift/bundle.zip
+/swift/libnew_york_calculate_iossimulator.a

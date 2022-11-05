@@ -1,0 +1,4 @@
+module NewYorkCalculateRust {
+    header "new_york_calculate.h"
+    export *
+}
