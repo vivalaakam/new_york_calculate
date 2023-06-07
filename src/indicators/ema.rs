@@ -17,13 +17,13 @@ assert_eq!(data.0.len(), 8);
 assert_eq!(format!("{:?}", data.0), "[25.0, 24.958333333333332, 24.89922222222222, 24.79748148148148, 24.69832098765432, 24.673880658436214, 24.855587105624142, 25.65372473708276]");
 ```
  */
-pub fn ema(input: Vec<f64>, period: usize) -> IndicatorsResult<(Vec<f64>,)> {
+pub fn ema(input: Vec<f64>, period: usize) -> IndicatorsResult<(Vec<f64>, )> {
     if period < 1 {
         return Err(IndicatorsError::InvalidOption("period".to_string()));
     }
 
-    if input.len() == 0 {
-        return Ok((vec![],));
+    if input.is_empty() {
+        return Ok((vec![], ));
     }
 
     let mut output = vec![];
@@ -32,10 +32,10 @@ pub fn ema(input: Vec<f64>, period: usize) -> IndicatorsResult<(Vec<f64>,)> {
     let mut val = input[0];
     output.push(input[0]);
 
-    for i in 1..input.len() {
-        val = (input[i] - val) * per + val;
+    for item in input.iter().skip(1) {
+        val = (item - val) * per + val;
         output.push(val);
     }
 
-    Ok((output,))
+    Ok((output, ))
 }

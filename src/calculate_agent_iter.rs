@@ -61,15 +61,14 @@ where
                 match agent.activate(candle, self.pointer) {
                     CalculateCommand::Unknown | CalculateCommand::None => {}
                     CalculateCommand::BuyProfit(gain, stake) => {
-                        match agent.buy_profit_open(
+                        if let Some(order) = agent.buy_profit_open(
                             candle,
                             stake,
                             gain,
                             self.step_lot,
                             self.step_price,
                         ) {
-                            Some(order) => self.sell_orders.push(order),
-                            None => {}
+                            self.sell_orders.push(order)
                         }
                     }
                 };

@@ -101,7 +101,7 @@ where
     }
 
     pub fn buy_profit_close(&mut self, order: Order, candle: &Candle, profit: f64) {
-        let mut order = order.clone();
+        let mut order = order;
         let order_sum = order.sell_price * order.qty;
 
         self.balance += order_sum;
@@ -131,7 +131,7 @@ where
         }
 
         self.executed_orders_len += 1;
-        if self.cache_orders == true {
+        if self.cache_orders {
             self.executed_orders.push(order);
         }
     }

@@ -29,7 +29,7 @@ pub fn hma(input: Vec<f64>, period: usize) -> IndicatorsResult<(Vec<f64>,)> {
 
     let mut output = vec![];
 
-    let period2 = (period / 2) as usize;
+    let period2 = period / 2;
     let periodsqrt = (period as f64).sqrt() as usize;
 
     let weights = period * (period + 1) / 2;

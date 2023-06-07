@@ -43,9 +43,9 @@ pub fn bbands(
     let mut sum = 0.0;
     let mut sum2 = 0.0;
 
-    for i in 0..period {
-        sum += input[i];
-        sum2 += input[i] * input[i];
+    for item in input.iter().take(period) {
+        sum += item;
+        sum2 += item * item;
     }
 
     let mut sd = (sum2 * scale - (sum * scale) * (sum * scale)).sqrt();

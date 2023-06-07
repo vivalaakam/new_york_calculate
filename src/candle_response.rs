@@ -17,21 +17,21 @@ pub struct CandleResponse {
     _ign: String,
 }
 
-impl Into<Candle> for CandleResponse {
-    fn into(self) -> Candle {
+impl From<CandleResponse> for Candle {
+    fn from(val: CandleResponse) -> Self {
         Candle {
-            start_time: self.start_time / 1000,
-            end_time: self.end_time / 1000,
-            open: self.open.parse::<f64>().unwrap(),
-            high: self.high.parse::<f64>().unwrap(),
-            low: self.low.parse::<f64>().unwrap(),
-            close: self.close.parse::<f64>().unwrap(),
-            volume: self.volume.parse::<f64>().unwrap(),
-            quote: self.quote.parse::<f64>().unwrap(),
-            trades: self.trades as f64,
-            buy_base: self.buy_base.parse::<f64>().unwrap(),
-            buy_quote: self.buy_quote.parse::<f64>().unwrap(),
-            interval: ((self.end_time as f64 - self.start_time as f64) / 60000f64).ceil() as u64,
+            start_time: val.start_time / 1000,
+            end_time: val.end_time / 1000,
+            open: val.open.parse::<f64>().unwrap(),
+            high: val.high.parse::<f64>().unwrap(),
+            low: val.low.parse::<f64>().unwrap(),
+            close: val.close.parse::<f64>().unwrap(),
+            volume: val.volume.parse::<f64>().unwrap(),
+            quote: val.quote.parse::<f64>().unwrap(),
+            trades: val.trades as f64,
+            buy_base: val.buy_base.parse::<f64>().unwrap(),
+            buy_quote: val.buy_quote.parse::<f64>().unwrap(),
+            interval: ((val.end_time as f64 - val.start_time as f64) / 60000f64).ceil() as u64,
             ..Candle::default()
         }
     }

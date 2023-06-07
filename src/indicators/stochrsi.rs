@@ -23,7 +23,7 @@ pub fn stochrsi(input: Vec<f64>, period: usize) -> IndicatorsResult<(Vec<f64>,)>
         return Err(IndicatorsError::InvalidOption("kperiod".to_string()));
     }
 
-    if input.len() <= period * 2 - 1 {
+    if input.len() < period * 2 {
         return Ok((vec![],));
     }
 

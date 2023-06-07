@@ -21,7 +21,7 @@ pub fn vpt(close: Vec<f64>, volume: Vec<f64>) -> IndicatorsResult<(Vec<f64>,)> {
     let mut output = vec![];
     let mut vpt = 0.0;
     for i in 1..close.len() {
-        vpt = vpt + volume[i] * (close[i] - close[i - 1]) / close[i - 1];
+        vpt += volume[i] * (close[i] - close[i - 1]) / close[i - 1];
         output.push(vpt);
     }
 

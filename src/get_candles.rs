@@ -1,10 +1,9 @@
 use new_york_utils::Matrix;
-use reqwest;
 use reqwest::Client;
 
+use crate::{Candle, Indicators};
 use crate::candle_response::CandleResponse;
 use crate::get_interval_key::get_interval_key;
-use crate::{Candle, Indicators};
 
 pub async fn get_candles(
     ticker: String,
@@ -18,7 +17,7 @@ pub async fn get_candles(
 
     let mut candles_cache = vec![];
     let mut has_candles = true;
-    while has_candles == true && from_time < to_time {
+    while has_candles && from_time < to_time {
         let body = Client::new()
             .get(format!(
                 "https://api.binance.com/api/v3/klines?symbol={}&interval={}&startTime={}&limit=1000",
@@ -86,27 +85,27 @@ pub fn perform_candles(
     let mut deltas = (false, false, false, false, false, false);
 
     for indicator in &indicators {
-        if deltas.0 == false && Indicators::candle_24().contains(&indicator) {
+        if !deltas.0 && Indicators::candle_24().contains(indicator) {
             deltas.0 = true;
         }
 
-        if deltas.1 == false && Indicators::volume_24().contains(&indicator) {
+        if !deltas.1 && Indicators::volume_24().contains(indicator) {
             deltas.1 = true;
         }
 
-        if deltas.2 == false && Indicators::quote_asset_24().contains(&indicator) {
+        if !deltas.2 && Indicators::quote_asset_24().contains(indicator) {
             deltas.2 = true;
         }
 
-        if deltas.3 == false && Indicators::trades_24().contains(&indicator) {
+        if !deltas.3 && Indicators::trades_24().contains(indicator) {
             deltas.3 = true;
         }
 
-        if deltas.4 == false && Indicators::buy_base_24().contains(&indicator) {
+        if !deltas.4 && Indicators::buy_base_24().contains(indicator) {
             deltas.4 = true;
         }
 
-        if deltas.5 == false && Indicators::buy_quote_24().contains(&indicator) {
+        if !deltas.5 && Indicators::buy_quote_24().contains(indicator) {
             deltas.5 = true;
         }
     }
@@ -124,42 +123,42 @@ pub fn perform_candles(
         let mut deltas_data = vec![(f64::MAX, f64::MIN); 6];
 
         for candle in &prev {
-            if deltas.0 == true {
+            if deltas.0 {
                 deltas_data[0] = (
                     deltas_data[0].0.min(candle.low),
                     deltas_data[0].1.max(candle.high),
                 )
             }
 
-            if deltas.1 == true {
+            if deltas.1 {
                 deltas_data[1] = (
                     deltas_data[1].0.min(candle.volume),
                     deltas_data[1].1.max(candle.volume),
                 )
             }
 
-            if deltas.2 == true {
+            if deltas.2 {
                 deltas_data[2] = (
                     deltas_data[2].0.min(candle.quote),
                     deltas_data[2].1.max(candle.quote),
                 )
             }
 
-            if deltas.3 == true {
+            if deltas.3 {
                 deltas_data[3] = (
                     deltas_data[3].0.min(candle.trades),
                     deltas_data[3].1.max(candle.trades),
                 )
             }
 
-            if deltas.4 == true {
+            if deltas.4 {
                 deltas_data[4] = (
                     deltas_data[4].0.min(candle.buy_base),
                     deltas_data[4].1.max(candle.buy_base),
                 )
             }
 
-            if deltas.5 == true {
+            if deltas.5 {
                 deltas_data[5] = (
                     deltas_data[5].0.min(candle.buy_quote),
                     deltas_data[5].1.max(candle.buy_quote),

@@ -135,63 +135,63 @@ impl Indicators {
     ) -> Vec<f64> {
         let data = match self {
             Indicators::Open24 => candles
-                .into_iter()
+                .iter()
                 .map(|c| range(deltas[0].0, deltas[0].1, 0f64, 1f64, c.open))
                 .collect::<Vec<_>>(),
             Indicators::High24 => candles
-                .into_iter()
+                .iter()
                 .map(|c| range(deltas[0].0, deltas[0].1, 0f64, 1f64, c.high))
                 .collect::<Vec<_>>(),
             Indicators::Low24 => candles
-                .into_iter()
+                .iter()
                 .map(|c| range(deltas[0].0, deltas[0].1, 0f64, 1f64, c.low))
                 .collect::<Vec<_>>(),
             Indicators::Close24 => candles
-                .into_iter()
+                .iter()
                 .map(|c| range(deltas[0].0, deltas[0].1, 0f64, 1f64, c.close))
                 .collect::<Vec<_>>(),
             Indicators::Volume24 => candles
-                .into_iter()
+                .iter()
                 .map(|c| range(deltas[1].0, deltas[1].1, 0f64, 1f64, c.volume))
                 .collect::<Vec<_>>(),
             Indicators::QuoteAsset24 => candles
-                .into_iter()
+                .iter()
                 .map(|c| range(deltas[2].0, deltas[2].1, 0f64, 1f64, c.quote))
                 .collect::<Vec<_>>(),
             Indicators::Trades24 => candles
-                .into_iter()
+                .iter()
                 .map(|c| range(deltas[3].0, deltas[3].1, 0f64, 1f64, c.trades))
                 .collect::<Vec<_>>(),
             Indicators::BuyBase24 => candles
-                .into_iter()
+                .iter()
                 .map(|c| range(deltas[4].0, deltas[4].1, 0f64, 1f64, c.buy_base))
                 .collect::<Vec<_>>(),
             Indicators::BuyQuote24 => candles
-                .into_iter()
+                .iter()
                 .map(|c| range(deltas[5].0, deltas[5].1, 0f64, 1f64, c.buy_quote))
                 .collect::<Vec<_>>(),
             Indicators::Candle24Delta => candles
-                .into_iter()
+                .iter()
                 .map(|_| deltas[0].1 / deltas[0].0 - 1f64)
                 .collect::<Vec<_>>(),
             Indicators::Volume24Delta => candles
-                .into_iter()
+                .iter()
                 .map(|_| (deltas[1].1 / deltas[1].0 - 1f64).min(10000f64))
                 .collect::<Vec<_>>(),
             Indicators::QuoteAsset24Delta => candles
-                .into_iter()
+                .iter()
                 .map(|_| (deltas[2].1 / deltas[2].0 - 1f64).min(10000f64))
                 .collect::<Vec<_>>(),
             Indicators::Trades24Delta => candles
-                .into_iter()
+                .iter()
                 .map(|_| (deltas[3].1 / deltas[3].0 - 1f64).min(10000f64))
                 .collect::<Vec<_>>(),
             Indicators::BuyBase24Delta => candles
-                .into_iter()
+                .iter()
                 .map(|_| (deltas[4].1 / deltas[4].0 - 1f64).min(10000f64))
                 .collect::<Vec<_>>(),
             Indicators::BuyQuote24Delta => candles
-                .into_iter()
+                .iter()
                 .map(|_| (deltas[5].1 / deltas[5].0 - 1f64).min(10000f64))
                 .collect::<Vec<_>>(),
             Indicators::Ad => {

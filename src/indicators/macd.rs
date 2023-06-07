@@ -45,7 +45,7 @@ pub fn macd(
         return Err(IndicatorsError::InvalidOption("signal_period".to_string()));
     }
 
-    if input.len() <= long_period - 1 {
+    if input.len() < long_period {
         return Ok((vec![], vec![], vec![]));
     }
 
@@ -65,9 +65,9 @@ pub fn macd(
     let mut short_ema = input[0];
     let mut long_ema = input[0];
     let mut signal_ema = 0.0;
-    for i in 1..input.len() {
-        short_ema = (input[i] - short_ema) * short_per + short_ema;
-        long_ema = (input[i] - long_ema) * long_per + long_ema;
+    for (i, val) in input.iter().enumerate().skip(1) {
+        short_ema = (val - short_ema) * short_per + short_ema;
+        long_ema = (val - long_ema) * long_per + long_ema;
         let out = short_ema - long_ema;
 
         if i == long_period - 1 {

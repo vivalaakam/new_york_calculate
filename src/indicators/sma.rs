@@ -22,7 +22,7 @@ pub fn sma(input: Vec<f64>, period: usize) -> IndicatorsResult<(Vec<f64>,)> {
         return Err(IndicatorsError::InvalidOption("period".to_string()));
     }
 
-    if input.len() == 0 {
+    if input.is_empty() {
         return Ok((vec![],));
     }
     let scale = 1.0 / period as f64;
@@ -30,8 +30,8 @@ pub fn sma(input: Vec<f64>, period: usize) -> IndicatorsResult<(Vec<f64>,)> {
 
     let mut sum = 0.0;
 
-    for i in 0..period {
-        sum += input[i];
+    for val in input.iter().take(period) {
+        sum += val;
     }
 
     output.push(sum * scale);
