@@ -1,110 +1,97 @@
-use std::sync::Mutex;
-use std::time::{SystemTime, UNIX_EPOCH};
-
-use log::LevelFilter;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use std::{env, fs};
 
 use new_york_calculate_core::{
-    get_candles_with_cache, CalculateActivate, CalculateAgent, CalculateAgentIter,
-    CalculateCommand, CalculateResult, CalculateStats, Candle,
+    Activate, Calculate, CalculateAgent, CalculateCommand, CalculateResult, CalculateStats, Candle,
 };
+use serde_json::Value;
+use tracing::info;
 
 #[derive(Debug)]
 struct CalculateIterActivate {
-    gain: f64,
-    profit: f64,
-    target: usize,
-    score: Mutex<f64>,
+    score: Mutex<f32>,
+    step: Arc<Mutex<u32>>,
 }
 
-impl CalculateActivate for &CalculateIterActivate {
-    fn activate(
-        &self,
-        candle: &Candle,
-        _position: usize,
-        _stats: &CalculateStats,
-    ) -> CalculateCommand {
-        if (candle.max_profit.last().unwrap_or(&0f64) / 100f64) + 1f64 > self.gain {
-            return CalculateCommand::BuyProfit(self.gain, self.profit);
-        }
+impl Activate for &CalculateIterActivate {
+    fn activate(&self, candle: &Candle, stats: &CalculateStats) -> CalculateCommand {
+        let mut step = self.step.lock().unwrap();
+        *step += 1;
 
-        CalculateCommand::None
+        info!("step: {step:?} {stats:?} {candle:?}");
+
+        return match *step % 8u32 {
+            0 => {
+                info!("BuyMarket");
+                CalculateCommand::BuyMarket { stake: 10.0 }
+            }
+            4 => {
+                info!("SellMarket");
+                CalculateCommand::SellMarket { stake: 10.0 }
+            }
+            _ => CalculateCommand::None,
+        };
     }
 
     fn on_end(&mut self, result: CalculateResult) {
-        println!("{:?}", result);
-        let mut data = self.score.lock().unwrap();
-        *data = result.score
+        info!("on_end: {result:?}");
+        let mut score = self.score.lock().unwrap();
+        *score = result.balance
     }
 }
 
 #[tokio::main]
 async fn main() {
-    let _ = env_logger::builder()
-        .filter_level(LevelFilter::Warn)
-        .is_test(true)
-        .try_init();
+    tracing_subscriber::fmt::init();
 
-    let mut candles = vec![];
+    let mut candles = HashMap::new();
 
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("Time went backwards")
-        .as_millis();
+    let json_path = env::current_dir().unwrap().join("./tests/candles.json");
 
-    let next = (now / 86400000) as u64;
-    let mut keys = vec![];
+    let file = fs::File::open(json_path).expect("file should open read only");
+    let resp = serde_json::from_reader::<_, Vec<Value>>(file).expect("file should be proper JSON");
 
-    let mut from = (next - 95) * 86400;
-    let to = from + 92 * 86400;
-
-    while from <= to {
-        keys.push(from);
-        from += 86400;
+    for row in resp {
+        let ts = candles.entry(row[0].as_u64().unwrap()).or_insert(vec![]);
+        ts.push(Candle {
+            start_time: row[0].as_u64().unwrap(),
+            end_time: row[6].as_u64().unwrap(),
+            symbol: "test".to_string(),
+            open: row[1].as_str().unwrap().parse().unwrap(),
+            high: row[2].as_str().unwrap().parse().unwrap(),
+            low: row[3].as_str().unwrap().parse().unwrap(),
+            close: row[4].as_str().unwrap().parse().unwrap(),
+            volume: row[5].as_str().unwrap().parse().unwrap(),
+            trades: row[8].as_u64().unwrap() as f32,
+        })
     }
-
-    keys.push(from);
-
-    for key in keys {
-        let new_candles = get_candles_with_cache("XRPBUSD".to_string(), 15, key, 12, None).await;
-        candles = [candles, new_candles].concat();
-    }
-
-    candles.sort();
-
-    let gain = [1.03, 1.0125, 1.01, 1.0075, 1.005];
-    let profit = [500.0, 200.0, 100.0, 50.0, 25.0];
-    let target = candles.len() - 288;
 
     let mut activates = vec![];
 
-    for g in gain {
-        for p in profit {
-            activates.push(CalculateIterActivate {
-                profit: p,
-                gain: g,
-                target,
-                score: Mutex::new(0f64),
-            });
-        }
-    }
+    activates.push(CalculateIterActivate {
+        score: Mutex::new(0f32),
+        step: Arc::new(Mutex::new(0)),
+    });
 
     let mut agents = vec![];
 
     for activate in activates.iter().enumerate() {
-        let agent = CalculateAgent::new(activate.0, 3000f64, false, Box::new(activate.1));
-
+        let agent = CalculateAgent::new(activate.0, 3000.0, 0.0001, Box::new(activate.1));
         agents.push(agent);
     }
 
-    let mut calculate_iter = CalculateAgentIter::new(&candles, 0.5, 1f64, 0.0001f64, 288, agents);
+    let mut calculate_iter = Calculate::new(&candles, 10, agents);
 
-    let mut cont = Ok(());
+    let mut cont = Some(());
 
-    while cont.is_ok() {
+    while cont.is_some() {
         cont = calculate_iter.next();
     }
 
-    for activate in activates {
-        println!("{:?}", activate);
+    calculate_iter.on_end();
+
+    for activate in activates.iter_mut() {
+        info!("activate: {activate:?}",);
     }
 }

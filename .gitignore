@@ -14,3 +14,13 @@ tmp/*.cbor
 /swift/libnew_york_calculate_macos.a
 /swift/bundle.zip
 /swift/libnew_york_calculate_iossimulator.a
+
+# Devenv
+.devenv*
+devenv.local.nix
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
