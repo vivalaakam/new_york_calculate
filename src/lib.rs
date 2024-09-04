@@ -1,10 +1,11 @@
 pub use activate::Activate;
 pub use agent::CalculateAgent;
 pub use calculate::Calculate;
-pub use candle::Candle;
+pub use candle::CandleTrait;
 pub use command::CalculateCommand;
 pub use result::CalculateResult;
 pub use stats::CalculateStats;
+pub use symbol::Symbol;
 
 mod activate;
 mod agent;

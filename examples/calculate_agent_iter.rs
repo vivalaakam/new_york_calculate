@@ -1,37 +1,78 @@
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use std::{env, fs};
 
-use new_york_calculate_core::{
-    Activate, Calculate, CalculateAgent, CalculateCommand, CalculateResult, CalculateStats, Candle,
-};
 use serde_json::Value;
 use tracing::info;
+
+use new_york_calculate_core::{
+    Activate, Calculate, CalculateAgent, CalculateCommand, CalculateResult, CalculateStats,
+    CandleTrait, Symbol,
+};
 
 #[derive(Debug)]
 struct CalculateIterActivate {
     score: Mutex<f32>,
-    step: Arc<Mutex<u32>>,
+    step: Mutex<u32>,
 }
 
-impl Activate for &CalculateIterActivate {
+#[derive(Clone, Debug)]
+pub struct Candle {
+    pub start_time: u64,
+    pub open: f32,
+    pub high: f32,
+    pub low: f32,
+    pub close: f32,
+}
+
+impl CandleTrait for Candle {
+    fn get_start_time(&self) -> u64 {
+        self.start_time
+    }
+
+    fn get_symbol(&self) -> Symbol {
+        "test".to_string()
+    }
+
+    fn get_open(&self) -> f32 {
+        self.open
+    }
+
+    fn get_high(&self) -> f32 {
+        self.high
+    }
+
+    fn get_low(&self) -> f32 {
+        self.low
+    }
+
+    fn get_close(&self) -> f32 {
+        self.close
+    }
+}
+
+impl Activate<Candle> for &CalculateIterActivate {
     fn activate(&self, candle: &Candle, stats: &CalculateStats) -> CalculateCommand {
         let mut step = self.step.lock().unwrap();
         *step += 1;
 
-        info!("step: {step:?} {stats:?} {candle:?}");
+        info!("activate {step}: {stats:?} {candle:?}");
 
         return match *step % 8u32 {
             0 => {
                 info!("BuyMarket");
-                CalculateCommand::BuyMarket { stake: 10.0 }
+                CalculateCommand::BuyMarket { stake: 100.0 }
             }
             4 => {
                 info!("SellMarket");
-                CalculateCommand::SellMarket { stake: 10.0 }
+                CalculateCommand::SellMarket { stake: 100.0 }
             }
             _ => CalculateCommand::None,
         };
+    }
+
+    fn on_end_round(&mut self, result: CalculateResult) {
+        info!("on_end_round {}: {result:?}", self.step.lock().unwrap());
     }
 
     fn on_end(&mut self, result: CalculateResult) {
@@ -56,32 +97,24 @@ async fn main() {
         let ts = candles.entry(row[0].as_u64().unwrap()).or_insert(vec![]);
         ts.push(Candle {
             start_time: row[0].as_u64().unwrap(),
-            end_time: row[6].as_u64().unwrap(),
-            symbol: "test".to_string(),
             open: row[1].as_str().unwrap().parse().unwrap(),
             high: row[2].as_str().unwrap().parse().unwrap(),
             low: row[3].as_str().unwrap().parse().unwrap(),
             close: row[4].as_str().unwrap().parse().unwrap(),
-            volume: row[5].as_str().unwrap().parse().unwrap(),
-            trades: row[8].as_u64().unwrap() as f32,
         })
     }
 
-    let mut activates = vec![];
-
-    activates.push(CalculateIterActivate {
+    let activate = CalculateIterActivate {
         score: Mutex::new(0f32),
-        step: Arc::new(Mutex::new(0)),
-    });
+        step: Mutex::new(0),
+    };
 
     let mut agents = vec![];
 
-    for activate in activates.iter().enumerate() {
-        let agent = CalculateAgent::new(activate.0, 3000.0, 0.0001, Box::new(activate.1));
-        agents.push(agent);
-    }
+    let agent = CalculateAgent::new(3000.0, 0.0001, Box::new(&activate));
+    agents.push(agent);
 
-    let mut calculate_iter = Calculate::new(&candles, 10, agents);
+    let mut calculate_iter = Calculate::new(&candles, agents);
 
     let mut cont = Some(());
 
@@ -91,7 +124,5 @@ async fn main() {
 
     calculate_iter.on_end();
 
-    for activate in activates.iter_mut() {
-        info!("activate: {activate:?}",);
-    }
+    info!("activate: {activate:?}",);
 }

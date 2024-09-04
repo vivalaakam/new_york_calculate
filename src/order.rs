@@ -13,7 +13,7 @@ pub enum OrderSide {
     Sell,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum OrderType {
     Market,
     Limit,
@@ -27,7 +27,6 @@ pub struct Order {
     pub price: f32,
     pub qty: f32,
     pub commission: f32,
-    pub agent: usize,
     pub id: Option<Uuid>,
     pub status: OrderStatus,
     pub side: OrderSide,

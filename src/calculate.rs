@@ -1,38 +1,38 @@
 use std::collections::HashMap;
 
 use crate::activate::Activate;
-use crate::{CalculateAgent, Candle};
+use crate::{CalculateAgent, CandleTrait};
 
-pub struct Calculate<'a, T>
+pub struct Calculate<'a, T, C>
 where
-    T: Activate,
+    T: Activate<C>,
+    C: CandleTrait,
 {
-    candles: &'a HashMap<u64, Vec<Candle>>,
+    candles: &'a HashMap<u64, Vec<C>>,
     pointer: usize,
     ts: Vec<u64>,
-    check_period: usize,
-    agents: Vec<CalculateAgent<T>>,
+    agents: Vec<CalculateAgent<T, C>>,
 }
 
-impl<'a, T> Calculate<'a, T>
+impl<'a, T, C> Calculate<'a, T, C>
 where
-    T: Activate,
+    T: Activate<C>,
+    C: CandleTrait,
 {
-    pub fn new(
-        candles: &'a HashMap<u64, Vec<Candle>>,
-        check_period: usize,
-        agents: Vec<CalculateAgent<T>>,
-    ) -> Self {
+    pub fn new(candles: &'a HashMap<u64, Vec<C>>, agents: Vec<CalculateAgent<T, C>>) -> Self {
         let mut ts = candles.keys().copied().collect::<Vec<_>>();
         ts.sort();
 
         Calculate {
             candles,
             pointer: 0,
-            check_period,
             agents,
             ts,
         }
+    }
+
+    pub fn get_agents(&self) -> &Vec<CalculateAgent<T, C>> {
+        &self.agents
     }
 
     pub fn get_pointer(&self) -> usize {
@@ -46,9 +46,10 @@ where
     }
 }
 
-impl<'a, T> Iterator for Calculate<'a, T>
+impl<'a, T, C> Iterator for Calculate<'a, T, C>
 where
-    T: Activate,
+    T: Activate<C>,
+    C: CandleTrait,
 {
     type Item = ();
 
@@ -56,12 +57,10 @@ where
         let ts = self.ts.get(self.pointer)?;
         let candles = self.candles.get(ts)?;
 
-        if self.pointer < self.candles.len() - self.check_period {
-            for agent in self.agents.iter_mut() {
-                for candle in candles.iter() {
-                    let order = agent.activate(candle);
-                    let _ = agent.perform_order(order, candle);
-                }
+        for agent in self.agents.iter_mut() {
+            for candle in candles.iter() {
+                let order = agent.activate(candle);
+                let _ = agent.perform_order(order, candle);
             }
         }
 
