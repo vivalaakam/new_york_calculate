@@ -418,7 +418,7 @@ mod tests {
 
         agent.perform_candle(&candle_1);
 
-        agent.on_end_round();
+        agent.on_end_round(0, &vec![candle_1]);
 
         let results = agent.get_result();
 
@@ -444,7 +444,7 @@ mod tests {
 
         agent.perform_candle(&candle_2);
 
-        agent.on_end_round();
+        agent.on_end_round(1, &vec![candle_2]);
 
         let results = agent.get_result();
 
@@ -481,7 +481,7 @@ mod tests {
 
         agent.perform_candle(&candle_1);
 
-        agent.on_end_round();
+        agent.on_end_round(candle_1.start_time, &vec![candle_1]);
 
         let results = agent.get_result();
 
@@ -503,7 +503,7 @@ mod tests {
 
         agent.perform_candle(&candle_2);
 
-        agent.on_end_round();
+        agent.on_end_round(candle_2.start_time, &vec![candle_2]);
 
         let results = agent.get_result();
 
@@ -535,7 +535,7 @@ mod tests {
 
         agent.perform_candle(&candle_3);
 
-        agent.on_end_round();
+        agent.on_end_round(candle_3.start_time, &vec![candle_3]);
 
         let results = agent.get_result();
 
@@ -557,7 +557,7 @@ mod tests {
 
         agent.perform_candle(&candle_4);
 
-        agent.on_end_round();
+        agent.on_end_round(candle_4.start_time, &vec![candle_4]);
 
         let results = agent.get_result();
 
