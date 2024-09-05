@@ -8,5 +8,5 @@ pub trait Activate<C> {
 
     fn on_end(&mut self, _result: CalculateResult) {}
 
-    fn on_end_round(&mut self, _result: CalculateResult) {}
+    fn on_end_round(&mut self, _ts: u64, _result: CalculateResult, _candles: &Vec<C>) {}
 }

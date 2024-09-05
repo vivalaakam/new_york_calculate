@@ -335,10 +335,10 @@ where
         self.activate.on_end(self.get_result())
     }
 
-    pub fn on_end_round(&mut self) {
+    pub fn on_end_round(&mut self, ts: u64, candles: &Vec<C>) {
         self.min_balance = self.min_balance.min(self.balance);
         self.balance_assets = self.portfolio_fiat.values().sum();
-        self.activate.on_end_round(self.get_result());
+        self.activate.on_end_round(ts, self.get_result(), candles);
     }
 }
 

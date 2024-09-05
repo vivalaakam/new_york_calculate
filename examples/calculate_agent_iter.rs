@@ -76,14 +76,14 @@ impl Activate<Candle> for &CalculateIterActivate {
         };
     }
 
-    fn on_end_round(&mut self, result: CalculateResult) {
-        info!("on_end_round {}: {result:?}", self.step.lock().unwrap());
+    fn on_end_round(&mut self, ts: u64, result: CalculateResult, _: &Vec<Candle>) {
+        info!("on_end_round {ts}: {result:?}");
     }
 
     fn on_end(&mut self, result: CalculateResult) {
         info!("on_end: {result:?}");
         let mut score = self.score.lock().unwrap();
-        *score = result.balance
+        *score = result.balance + result.assets_fiat.iter().map(|r| r.1).sum::<f32>();
     }
 }
 

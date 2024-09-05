@@ -68,7 +68,7 @@ where
             for candle in candles.iter() {
                 agent.perform_candle(candle);
             }
-            agent.on_end_round();
+            agent.on_end_round(*ts, candles);
         }
 
         self.pointer += 1;
