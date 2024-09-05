@@ -52,7 +52,12 @@ impl CandleTrait for Candle {
 }
 
 impl Activate<Candle> for &CalculateIterActivate {
-    fn activate(&self, candle: &Candle, stats: &CalculateStats) -> CalculateCommand {
+    fn activate(
+        &self,
+        candle: &Candle,
+        _: &Vec<Candle>,
+        stats: &CalculateStats,
+    ) -> CalculateCommand {
         let mut step = self.step.lock().unwrap();
         *step += 1;
 

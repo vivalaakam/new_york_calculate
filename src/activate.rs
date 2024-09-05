@@ -2,7 +2,7 @@ use crate::stats::CalculateStats;
 use crate::{CalculateCommand, CalculateResult, CandleTrait};
 
 pub trait Activate<C> {
-    fn activate(&self, candle: &C, stats: &CalculateStats) -> CalculateCommand
+    fn activate(&self, candle: &C, candles: &Vec<C>, stats: &CalculateStats) -> CalculateCommand
     where
         C: CandleTrait;
 

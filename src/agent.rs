@@ -55,8 +55,9 @@ where
         }
     }
 
-    pub fn activate(&self, candle: &C) -> CalculateCommand {
-        self.activate.activate(candle, &self.get_stats(candle))
+    pub fn activate(&self, candle: &C, candles: &Vec<C>) -> CalculateCommand {
+        self.activate
+            .activate(candle, candles, &self.get_stats(candle))
     }
 
     pub fn get_stats(&self, candle: &C) -> CalculateStats {
@@ -386,7 +387,12 @@ mod tests {
     struct CalculateIterActivate {}
 
     impl Activate<Candle> for CalculateIterActivate {
-        fn activate(&self, _candle: &Candle, _stats: &CalculateStats) -> CalculateCommand {
+        fn activate(
+            &self,
+            _candle: &Candle,
+            _candles: &Vec<Candle>,
+            _stats: &CalculateStats,
+        ) -> CalculateCommand {
             CalculateCommand::None
         }
     }

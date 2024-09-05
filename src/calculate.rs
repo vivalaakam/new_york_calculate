@@ -59,7 +59,7 @@ where
 
         for agent in self.agents.iter_mut() {
             for candle in candles.iter() {
-                let order = agent.activate(candle);
+                let order = agent.activate(candle, candles);
                 let _ = agent.perform_order(order, candle);
             }
         }
