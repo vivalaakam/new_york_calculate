@@ -345,7 +345,7 @@ where
 mod tests {
     use crate::candle::CandleTrait;
     use crate::symbol::Symbol;
-    use crate::{Activate, CalculateAgent, CalculateCommand, CalculateResult, CalculateStats};
+    use crate::{Activate, CalculateAgent, CalculateCommand, CalculateResult};
 
     #[derive(Clone, Debug)]
     pub struct Candle {
@@ -386,11 +386,7 @@ mod tests {
     struct CalculateIterActivate {}
 
     impl Activate<Candle> for CalculateIterActivate {
-        fn activate(
-            &self,
-            _candles: &Vec<Candle>,
-            _stats: &CalculateResult,
-        ) -> Vec<CalculateCommand> {
+        fn activate(&self, _candles: &[Candle], _stats: &CalculateResult) -> Vec<CalculateCommand> {
             vec![CalculateCommand::None]
         }
     }
