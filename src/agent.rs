@@ -55,9 +55,8 @@ where
         }
     }
 
-    pub fn activate(&self, candle: &C, candles: &Vec<C>) -> CalculateCommand {
-        self.activate
-            .activate(candle, candles, &self.get_stats(candle))
+    pub fn activate(&self, candles: &[C]) -> Vec<CalculateCommand> {
+        self.activate.activate(candles, &self.get_result())
     }
 
     pub fn get_stats(&self, candle: &C) -> CalculateStats {
@@ -221,7 +220,7 @@ where
         candle: &C,
     ) -> Result<Option<Order>, CalculateAgentError> {
         match command {
-            CalculateCommand::BuyMarket { stake } => self
+            CalculateCommand::BuyMarket { stake, .. } => self
                 .buy_order(
                     candle,
                     candle.get_open(),
@@ -230,7 +229,7 @@ where
                     Some(Uuid::new_v4()),
                 )
                 .map(Some),
-            CalculateCommand::SellMarket { stake } => self
+            CalculateCommand::SellMarket { stake, .. } => self
                 .sell_order(
                     candle,
                     candle.get_open(),
@@ -239,13 +238,13 @@ where
                     Some(Uuid::new_v4()),
                 )
                 .map(Some),
-            CalculateCommand::BuyLimit { stake, price } => self
+            CalculateCommand::BuyLimit { stake, price, .. } => self
                 .buy_order(candle, price, stake, OrderType::Limit, Some(Uuid::new_v4()))
                 .map(Some),
-            CalculateCommand::SellLimit { stake, price } => self
+            CalculateCommand::SellLimit { stake, price, .. } => self
                 .sell_order(candle, price, stake, OrderType::Limit, Some(Uuid::new_v4()))
                 .map(Some),
-            CalculateCommand::BuyProfit { stake, profit } => self
+            CalculateCommand::BuyProfit { stake, profit, .. } => self
                 .buy_profit_order(
                     candle,
                     candle.get_open(),
@@ -335,7 +334,7 @@ where
         self.activate.on_end(self.get_result())
     }
 
-    pub fn on_end_round(&mut self, ts: u64, candles: &Vec<C>) {
+    pub fn on_end_round(&mut self, ts: u64, candles: &[C]) {
         self.min_balance = self.min_balance.min(self.balance);
         self.balance_assets = self.portfolio_fiat.values().sum();
         self.activate.on_end_round(ts, self.get_result(), candles);
@@ -346,7 +345,7 @@ where
 mod tests {
     use crate::candle::CandleTrait;
     use crate::symbol::Symbol;
-    use crate::{Activate, CalculateAgent, CalculateCommand, CalculateStats};
+    use crate::{Activate, CalculateAgent, CalculateCommand, CalculateResult, CalculateStats};
 
     #[derive(Clone, Debug)]
     pub struct Candle {
@@ -389,11 +388,10 @@ mod tests {
     impl Activate<Candle> for CalculateIterActivate {
         fn activate(
             &self,
-            _candle: &Candle,
             _candles: &Vec<Candle>,
-            _stats: &CalculateStats,
-        ) -> CalculateCommand {
-            CalculateCommand::None
+            _stats: &CalculateResult,
+        ) -> Vec<CalculateCommand> {
+            vec![CalculateCommand::None]
         }
     }
 
@@ -403,8 +401,10 @@ mod tests {
 
         let mut agent = CalculateAgent::new(1000.0, 0.0001, Box::new(CalculateIterActivate {}));
 
+        let symbol = "BTC".to_string();
+
         let candle_1 = Candle {
-            symbol: "BTC".to_string(),
+            symbol: symbol.clone(),
             start_time: 0,
             open: 100.0,
             high: 120.0,
@@ -412,7 +412,13 @@ mod tests {
             close: 110.0,
         };
 
-        let result = agent.perform_order(CalculateCommand::BuyMarket { stake: 5.0 }, &candle_1);
+        let result = agent.perform_order(
+            CalculateCommand::BuyMarket {
+                symbol: symbol.clone(),
+                stake: 5.0,
+            },
+            &candle_1,
+        );
 
         assert!(matches!(result, Ok(Some(_))));
 
@@ -430,7 +436,7 @@ mod tests {
         assert_eq!(results.executed_orders, 1);
 
         let candle_2 = Candle {
-            symbol: "BTC".to_string(),
+            symbol: symbol.clone(),
             start_time: 1,
             open: 120.0,
             high: 130.0,
@@ -438,7 +444,13 @@ mod tests {
             close: 110.0,
         };
 
-        let result = agent.perform_order(CalculateCommand::SellMarket { stake: 5.0 }, &candle_2);
+        let result = agent.perform_order(
+            CalculateCommand::SellMarket {
+                symbol: symbol.clone(),
+                stake: 5.0,
+            },
+            &candle_2,
+        );
 
         assert!(matches!(result, Ok(Some(_))));
 
@@ -460,8 +472,10 @@ mod tests {
     fn test_calculate_agent_limit() {
         let mut agent = CalculateAgent::new(1000.0, 0.0001, Box::new(CalculateIterActivate {}));
 
+        let symbol = "BTC".to_string();
+
         let candle_1 = Candle {
-            symbol: "BTC".to_string(),
+            symbol: symbol.clone(),
             start_time: 0,
             open: 100.0,
             high: 120.0,
@@ -471,6 +485,7 @@ mod tests {
 
         let result = agent.perform_order(
             CalculateCommand::BuyLimit {
+                symbol: symbol.clone(),
                 price: 85.0,
                 stake: 5.0,
             },
@@ -515,7 +530,7 @@ mod tests {
         assert_eq!(results.executed_orders, 1);
 
         let candle_3 = Candle {
-            symbol: "BTC".to_string(),
+            symbol: symbol.clone(),
             start_time: 3,
             open: 120.0,
             high: 130.0,
@@ -525,6 +540,7 @@ mod tests {
 
         let result = agent.perform_order(
             CalculateCommand::SellLimit {
+                symbol: symbol.clone(),
                 stake: 5.0,
                 price: 135.0,
             },

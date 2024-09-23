@@ -58,9 +58,14 @@ where
         let candles = self.candles.get(ts)?;
 
         for agent in self.agents.iter_mut() {
-            for candle in candles.iter() {
-                let order = agent.activate(candle, candles);
-                let _ = agent.perform_order(order, candle);
+            let orders = agent.activate(candles);
+            for order in orders {
+                if let Some(candle) = candles
+                    .iter()
+                    .find(|c| c.get_symbol() == order.get_symbol())
+                {
+                    let _ = agent.perform_order(order, candle);
+                }
             }
         }
 

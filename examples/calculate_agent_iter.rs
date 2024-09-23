@@ -6,8 +6,7 @@ use serde_json::Value;
 use tracing::info;
 
 use new_york_calculate_core::{
-    Activate, Calculate, CalculateAgent, CalculateCommand, CalculateResult, CalculateStats,
-    CandleTrait, Symbol,
+    Activate, Calculate, CalculateAgent, CalculateCommand, CalculateResult, CandleTrait, Symbol,
 };
 
 #[derive(Debug)]
@@ -52,31 +51,34 @@ impl CandleTrait for Candle {
 }
 
 impl Activate<Candle> for &CalculateIterActivate {
-    fn activate(
-        &self,
-        candle: &Candle,
-        _: &Vec<Candle>,
-        stats: &CalculateStats,
-    ) -> CalculateCommand {
-        let mut step = self.step.lock().unwrap();
+    fn activate(&self, candles: &[Candle], stats: &CalculateResult) -> Vec<CalculateCommand> {
+        let mut step: std::sync::MutexGuard<'_, u32> = self.step.lock().unwrap();
         *step += 1;
 
-        info!("activate {step}: {stats:?} {candle:?}");
+        let candle = candles.last().unwrap();
+
+        info!("activate {step}: {stats:?} {candles:?}");
 
         return match *step % 8u32 {
             0 => {
                 info!("BuyMarket");
-                CalculateCommand::BuyMarket { stake: 100.0 }
+                vec![CalculateCommand::BuyMarket {
+                    symbol: candle.get_symbol(),
+                    stake: 100.0,
+                }]
             }
             4 => {
                 info!("SellMarket");
-                CalculateCommand::SellMarket { stake: 100.0 }
+                vec![CalculateCommand::SellMarket {
+                    symbol: candle.get_symbol(),
+                    stake: 100.0,
+                }]
             }
-            _ => CalculateCommand::None,
+            _ => vec![CalculateCommand::None],
         };
     }
 
-    fn on_end_round(&mut self, ts: u64, result: CalculateResult, _: &Vec<Candle>) {
+    fn on_end_round(&mut self, ts: u64, result: CalculateResult, _: &[Candle]) {
         info!("on_end_round {ts}: {result:?}");
     }
 
