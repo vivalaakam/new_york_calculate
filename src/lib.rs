@@ -3,6 +3,7 @@ pub use agent::CalculateAgent;
 pub use calculate::Calculate;
 pub use candle::CandleTrait;
 pub use command::CalculateCommand;
+pub use order::Order;
 pub use result::CalculateResult;
 pub use stats::CalculateStats;
 pub use symbol::Symbol;
@@ -16,3 +17,5 @@ mod order;
 mod result;
 mod stats;
 mod symbol;
+#[cfg(test)]
+mod test_utils;

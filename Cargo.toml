@@ -1,6 +1,6 @@
 [package]
 name = "new_york_calculate_core"
-version = "0.0.61"
+version = "0.0.62"
 authors = ["Andrey Makarov <viva.la.akam@gmail.com>"]
 edition = "2018"
 description = "Library for calculation some things"
@@ -8,12 +8,12 @@ license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-thiserror = "1.0.63"
-tracing = "0.1.40"
-tracing-subscriber = "0.3.18"
-uuid = { version = "1.7", features = ["v4"] }
-tokio = { version = "1.40.0", features = ["rt", "rt-multi-thread", "macros"] }
-serde_json = "1.0.127"
+thiserror = "2.0.12"
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"
+uuid = { version = "1.16", features = ["v4"] }
+tokio = { version = "1.44.1", features = ["rt", "rt-multi-thread", "macros"] }
+serde_json = "1.0.140"
 
 [lib]
 name = "new_york_calculate_core"
