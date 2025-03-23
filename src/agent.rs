@@ -440,13 +440,19 @@ where
 mod tests {
     use crate::order::Order;
     use crate::test_utils::{init_tracing, Candle};
-    use crate::{Activate, CalculateAgent, CalculateCommand, CalculateResult};
+    use crate::{Activate, CalculateAgent, CalculateCommand, CalculateResult, Symbol};
+    use std::collections::HashMap;
     use tracing::info;
 
     struct CalculateIterActivate {}
 
     impl Activate<Candle> for CalculateIterActivate {
-        fn activate(&self, _candles: &[Candle], _stats: &CalculateResult) -> Vec<CalculateCommand> {
+        fn activate(
+            &self,
+            _candles: &[Candle],
+            _stats: &CalculateResult,
+            _active: &HashMap<Symbol, Vec<Order>>,
+        ) -> Vec<CalculateCommand> {
             vec![CalculateCommand::None]
         }
     }
