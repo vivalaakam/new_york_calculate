@@ -1,7 +1,7 @@
-use std::collections::HashMap;
-
 use crate::activate::Activate;
 use crate::{CalculateAgent, CandleTrait};
+use std::collections::HashMap;
+use std::fmt::Debug;
 
 pub struct Calculate<'a, T, C>
 where
@@ -17,7 +17,7 @@ where
 impl<'a, T, C> Calculate<'a, T, C>
 where
     T: Activate<C>,
-    C: CandleTrait,
+    C: CandleTrait + Debug,
 {
     pub fn new(candles: &'a HashMap<u64, Vec<C>>, agents: Vec<CalculateAgent<T, C>>) -> Self {
         let mut ts = candles.keys().copied().collect::<Vec<_>>();
@@ -46,10 +46,10 @@ where
     }
 }
 
-impl<'a, T, C> Iterator for Calculate<'a, T, C>
+impl<T, C> Iterator for Calculate<'_, T, C>
 where
     T: Activate<C>,
-    C: CandleTrait,
+    C: CandleTrait + Debug,
 {
     type Item = ();
 
@@ -57,19 +57,17 @@ where
         let ts = self.ts.get(self.pointer)?;
         let candles = self.candles.get(ts)?;
 
+        // Create a symbol-to-candle mapping for O(1) lookups
+        let candle_map: HashMap<_, _> = candles.iter().map(|c| (c.get_symbol(), c)).collect();
+
         for agent in self.agents.iter_mut() {
             let orders = agent.activate(candles);
             for order in orders {
-                if let Some(candle) = candles
-                    .iter()
-                    .find(|c| c.get_symbol() == order.get_symbol())
-                {
+                if let Some(&candle) = candle_map.get(&order.get_symbol()) {
                     let _ = agent.perform_order(order, candle);
                 }
             }
-        }
 
-        for agent in &mut self.agents {
             for candle in candles.iter() {
                 agent.perform_candle(candle);
             }
@@ -77,7 +75,6 @@ where
         }
 
         self.pointer += 1;
-
         Some(())
     }
 }
