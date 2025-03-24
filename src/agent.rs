@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
@@ -263,45 +263,41 @@ where
     #[instrument(level = "debug", skip(self))]
     pub fn perform_candle(&mut self, candle: &C) {
         if let Some(orders) = self.queue_orders.get_mut(&candle.get_symbol()) {
-            let mut executed = vec![];
+            let mut executed_ids = HashSet::new();
 
             for order in orders.iter_mut() {
-                let performed = match order.side {
+                let mut executed_order = match order.side {
                     OrderSide::Buy => {
                         if order.price > candle.get_low() {
-                            let executed_order = handle_buy_executed_order!(self, order, candle);
-                            executed.push(executed_order);
-                            true
+                            Some(handle_buy_executed_order!(self, order, candle))
                         } else {
-                            false
+                            None
                         }
                     }
                     OrderSide::Sell => {
                         if order.price < candle.get_high() {
-                            let executed_order = handle_sell_executed_order!(self, order, candle);
-                            executed.push(executed_order);
-                            true
+                            Some(handle_sell_executed_order!(self, order, candle))
                         } else {
-                            false
+                            None
                         }
                     }
                 };
 
-                if let Some(expiration) = order.expiration {
-                    if order.created_at + expiration < candle.get_start_time() && !performed {
-                        let executed_order = handle_cancel_order!(self, order, candle);
-                        executed.push(executed_order);
+                if executed_order.is_none() {
+                    if let Some(expiration) = order.expiration {
+                        if order.created_at + expiration < candle.get_start_time() {
+                            executed_order = Some(handle_cancel_order!(self, order, candle));
+                        }
                     }
+                }
+
+                if let Some(executed_order) = executed_order {
+                    executed_ids.insert(executed_order.id);
+                    self.executed_orders.push(executed_order);
                 }
             }
 
-            let executed_ids: Vec<Uuid> = executed.iter().map(|o| o.id).collect();
-
             orders.retain(|o| !executed_ids.contains(&o.id));
-
-            for order in executed.into_iter() {
-                self.executed_orders.push(order);
-            }
         }
 
         if let Some(order_sum) = self.portfolio_stock.get(&candle.get_symbol()) {
