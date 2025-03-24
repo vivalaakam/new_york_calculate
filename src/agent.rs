@@ -1,5 +1,4 @@
-use std::cmp::PartialEq;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
@@ -7,10 +6,16 @@ use crate::activate::Activate;
 use crate::candle::CandleTrait;
 use crate::order::{Order, OrderSide, OrderStatus, OrderType};
 use crate::symbol::Symbol;
-use crate::{CalculateCommand, CalculateResult, CalculateStats};
-use thiserror::Error;
+use crate::{
+    handle_buy_executed_order, handle_cancel_order, handle_sell_executed_order, CalculateCommand,
+    CalculateResult, CalculateStats,
+};
+use errors::CalculateAgentError;
 use tracing::{debug, instrument};
 use uuid::Uuid;
+
+mod errors;
+mod macros;
 
 pub struct CalculateAgent<T: Activate<C> + ?Sized, C: CandleTrait> {
     balance: f32,
@@ -23,16 +28,6 @@ pub struct CalculateAgent<T: Activate<C> + ?Sized, C: CandleTrait> {
     queue_orders: HashMap<Symbol, Vec<Order>>,
     executed_orders: Vec<Order>,
     candle: PhantomData<C>,
-}
-
-#[derive(Debug, Error, PartialEq)]
-pub enum CalculateAgentError {
-    #[error("Not enough balance: {0} < {1}")]
-    NotEnoughBalance(f32, f32),
-    #[error("Not enough asset balance {0}: {1} < {2}")]
-    NotAssetEnoughBalance(Symbol, f32, f32),
-    #[error("Unknown command")]
-    UnknownCommand,
 }
 
 impl<T, C> CalculateAgent<T, C>
@@ -55,11 +50,15 @@ where
         }
     }
 
+    /// Activate the agent
+    #[instrument(level = "debug", skip(self))]
     pub fn activate(&self, candles: &[C]) -> Vec<CalculateCommand> {
         self.activate
             .activate(candles, &self.get_result(), &self.queue_orders)
     }
 
+    /// Get the stats of the agent
+    #[instrument(level = "debug", skip(self))]
     pub fn get_stats(&self, candle: &C) -> CalculateStats {
         let count = self
             .portfolio_stock
@@ -82,6 +81,7 @@ where
         }
     }
 
+    /// Buy an order
     #[instrument(level = "debug", skip(self))]
     pub fn buy_order(
         &mut self,
@@ -95,10 +95,13 @@ where
         let order_sum = qty * price;
 
         if self.balance < order_sum {
-            return Err(CalculateAgentError::NotEnoughBalance(self.balance, qty));
+            return Err(CalculateAgentError::InsufficientBalance {
+                available: self.balance,
+                required: order_sum,
+            });
         }
 
-        let mut order = Order {
+        let order = Order {
             created_at: candle.get_start_time(),
             finished_at: 0,
             price,
@@ -116,24 +119,8 @@ where
 
         match order_type {
             OrderType::Market => {
-                self.portfolio_stock
-                    .entry(candle.get_symbol())
-                    .and_modify(|v| *v += qty)
-                    .or_insert(qty);
-
-                self.balance -= order.commission;
-
-                debug!(
-                    balance = self.balance,
-                    order = ?order,
-                    portfolio_stock = ?self.portfolio_stock.get(&candle.get_symbol()),
-                    "perform_market_buy done"
-                );
-
-                order.finished_at = candle.get_start_time();
-                order.status = OrderStatus::Close;
-
-                self.executed_orders.push(order.clone());
+                let executed_order = handle_buy_executed_order!(self, order, candle);
+                self.executed_orders.push(executed_order);
             }
             OrderType::Limit => {
                 self.queue_orders
@@ -146,6 +133,7 @@ where
         Ok(order)
     }
 
+    /// Sell an order
     #[instrument(level = "debug", skip(self))]
     pub fn sell_order(
         &mut self,
@@ -162,11 +150,11 @@ where
             .unwrap_or(&0.0);
 
         if qty > *portfolio_amount {
-            return Err(CalculateAgentError::NotAssetEnoughBalance(
-                candle.get_symbol(),
-                *portfolio_amount,
-                qty,
-            ));
+            return Err(CalculateAgentError::InsufficientAssetBalance {
+                symbol: candle.get_symbol(),
+                available: *portfolio_amount,
+                required: qty,
+            });
         }
 
         self.portfolio_stock
@@ -175,7 +163,7 @@ where
 
         let order_sum = qty * price;
 
-        let mut order = Order {
+        let order = Order {
             id: id.unwrap_or(Uuid::new_v4()),
             created_at: candle.get_start_time(),
             finished_at: 0,
@@ -191,13 +179,8 @@ where
 
         match order_type {
             OrderType::Market => {
-                self.balance += order_sum;
-                self.balance -= order.commission;
-
-                order.finished_at = candle.get_start_time();
-                order.status = OrderStatus::Close;
-
-                self.executed_orders.push(order.clone());
+                let executed_order = handle_sell_executed_order!(self, order, candle);
+                self.executed_orders.push(executed_order);
             }
             OrderType::Limit => {
                 self.queue_orders
@@ -210,6 +193,7 @@ where
         Ok(order)
     }
 
+    /// Perform an order
     #[instrument(level = "debug", skip(self))]
     pub fn perform_order(
         &mut self,
@@ -269,93 +253,51 @@ where
                 .map(Some),
             CalculateCommand::None | CalculateCommand::Unknown => Ok(None),
             CalculateCommand::CancelLimit { symbol, id } => {
-                self.perform_cancel_order(symbol, id);
+                self.cancel_order(symbol, id, candle);
                 Ok(None)
             }
         }
     }
 
+    /// Perform a candle
     #[instrument(level = "debug", skip(self))]
     pub fn perform_candle(&mut self, candle: &C) {
-        let Some(orders) = self.queue_orders.get_mut(&candle.get_symbol()) else {
-            if let Some(order_sum) = self.portfolio_stock.get(&candle.get_symbol()) {
-                self.portfolio_fiat
-                    .insert(candle.get_symbol(), order_sum * candle.get_close());
-            }
+        if let Some(orders) = self.queue_orders.get_mut(&candle.get_symbol()) {
+            let mut executed_ids = HashSet::new();
 
-            debug!("exit perform_candle");
-            return;
-        };
+            for order in orders.iter_mut() {
+                let mut executed_order = match order.side {
+                    OrderSide::Buy => {
+                        if order.price > candle.get_low() {
+                            Some(handle_buy_executed_order!(self, order, candle))
+                        } else {
+                            None
+                        }
+                    }
+                    OrderSide::Sell => {
+                        if order.price < candle.get_high() {
+                            Some(handle_sell_executed_order!(self, order, candle))
+                        } else {
+                            None
+                        }
+                    }
+                };
 
-        let mut executed = vec![];
-
-        for order in orders.into_iter() {
-            match order.side {
-                OrderSide::Buy => {
-                    if order.price > candle.get_low() {
-                        self.portfolio_stock
-                            .entry(candle.get_symbol())
-                            .and_modify(|v| *v += order.qty)
-                            .or_insert(order.qty);
-
-                        self.balance -= order.commission;
-
-                        debug!(balance = self.balance,  order = ?order, "perform_buy_order done");
-
-                        let mut order = order.clone();
-                        order.status = OrderStatus::Close;
-                        order.finished_at = candle.get_start_time();
-
-                        executed.push(order);
-                    } else if let Some(expiration) = order.expiration {
+                if executed_order.is_none() {
+                    if let Some(expiration) = order.expiration {
                         if order.created_at + expiration < candle.get_start_time() {
-                            self.balance += order.price * order.qty;
-
-                            debug!(balance = self.balance,  order = ?order, "perform_buy_order cancelled");
-
-                            let mut order = order.clone();
-                            order.status = OrderStatus::Cancel;
-                            order.finished_at = candle.get_start_time();
-                            executed.push(order.clone());
+                            executed_order = Some(handle_cancel_order!(self, order, candle));
                         }
                     }
                 }
-                OrderSide::Sell => {
-                    if order.price < candle.get_high() {
-                        self.balance += order.price * order.qty;
-                        self.balance -= order.commission;
 
-                        debug!(balance = self.balance,  order = ?order, "perform_sell_order done");
-
-                        let mut order = order.clone();
-                        order.status = OrderStatus::Close;
-                        order.finished_at = candle.get_start_time();
-
-                        executed.push(order.clone());
-                    } else if let Some(expiration) = order.expiration {
-                        if order.created_at + expiration < candle.get_start_time() {
-                            self.portfolio_stock
-                                .entry(order.symbol.clone())
-                                .and_modify(|v| *v += order.qty);
-
-                            debug!(balance = self.balance,  order = ?order, "perform_sell_order cancelled");
-
-                            let mut order = order.clone();
-                            order.status = OrderStatus::Cancel;
-                            order.finished_at = candle.get_start_time();
-                            executed.push(order.clone());
-                        }
-                    }
+                if let Some(executed_order) = executed_order {
+                    executed_ids.insert(executed_order.id);
+                    self.executed_orders.push(executed_order);
                 }
             }
-        }
 
-        let executed_ids: Vec<Uuid> = executed.iter().map(|o| o.id).collect();
-
-        orders.retain(|o| !executed_ids.contains(&o.id));
-
-        for order in executed.into_iter() {
-            self.executed_orders.push(order);
+            orders.retain(|o| !executed_ids.contains(&o.id));
         }
 
         if let Some(order_sum) = self.portfolio_stock.get(&candle.get_symbol()) {
@@ -371,35 +313,26 @@ where
         );
     }
 
+    /// Perform a cancel order
     #[instrument(level = "debug", skip(self))]
-    fn perform_cancel_order(&mut self, symbol: Symbol, id: Uuid) {
-        if let Some(orders) = self.queue_orders.get_mut(&symbol.clone()) {
-            if let Some(order) = orders.iter().find(|o| o.id == id) {
-                let mut order = order.clone();
-
-                match order.side {
-                    OrderSide::Buy => {
-                        self.balance += order.price * order.qty;
-                    }
-                    OrderSide::Sell => {
-                        self.portfolio_stock
-                            .entry(symbol)
-                            .and_modify(|v| *v += order.qty);
-                    }
-                }
-
-                order.status = OrderStatus::Cancel;
-
-                self.executed_orders.push(order.clone());
-
-                orders.retain(|o| o.id != id);
-                return;
-            } else {
-                debug!(?orders, "Order sell not found");
-            }
+    fn cancel_order(&mut self, symbol: Symbol, id: Uuid, candle: &C) {
+        let Some(orders) = self.queue_orders.get_mut(&symbol.clone()) else {
+            return;
         };
+
+        let Some(order) = orders.iter().find(|o| o.id == id) else {
+            return;
+        };
+
+        let executed_order = handle_cancel_order!(self, order, candle);
+
+        self.executed_orders.push(executed_order);
+
+        orders.retain(|o| o.id != id);
     }
 
+    /// Get the result of the agent
+    #[instrument(level = "debug", skip(self))]
     pub fn get_result(&self) -> CalculateResult {
         debug!(
             balance = self.balance,
@@ -424,10 +357,14 @@ where
         }
     }
 
+    /// Final action after all rounds finished
+    #[instrument(level = "debug", skip(self))]
     pub fn on_end(&mut self) {
         self.activate.on_end(self.get_result())
     }
 
+    /// Action after a round finished
+    #[instrument(level = "debug", skip(self))]
     pub fn on_end_round(&mut self, ts: u64, candles: &[C]) {
         self.min_balance = self.min_balance.min(self.balance);
         self.balance_assets = self.portfolio_fiat.values().sum();
