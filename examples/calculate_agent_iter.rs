@@ -55,11 +55,15 @@ impl Activate<Candle> for &CalculateIterActivate {
     fn activate(
         &self,
         candles: &[Candle],
+        _prices: &HashMap<Symbol, f32>,
         stats: &CalculateResult,
         _active: &HashMap<Symbol, Vec<Order>>,
     ) -> Vec<CalculateCommand> {
         let mut step: std::sync::MutexGuard<'_, u32> = self.step.lock().unwrap();
         *step += 1;
+
+        let mut score = self.score.lock().unwrap();
+        *score = stats.balance + stats.assets_fiat.iter().map(|r| r.1).sum::<f32>();
 
         let Some(candle) = candles.last() else {
             return vec![];
@@ -84,16 +88,6 @@ impl Activate<Candle> for &CalculateIterActivate {
             }
             _ => vec![CalculateCommand::None],
         }
-    }
-
-    fn on_end_round(&mut self, ts: u64, result: CalculateResult, _: &[Candle], _: &[Order]) {
-        info!("on_end_round {ts}: {result:?}");
-    }
-
-    fn on_end(&mut self, result: CalculateResult) {
-        info!("on_end: {result:?}");
-        let mut score = self.score.lock().unwrap();
-        *score = result.balance + result.assets_fiat.iter().map(|r| r.1).sum::<f32>();
     }
 }
 

@@ -52,9 +52,9 @@ where
 
     /// Activate the agent
     #[instrument(level = "debug", skip(self))]
-    pub fn activate(&self, candles: &[C]) -> Vec<CalculateCommand> {
+    pub fn activate(&self, candles: &[C], prices: &HashMap<Symbol, f32>) -> Vec<CalculateCommand> {
         self.activate
-            .activate(candles, &self.get_result(), &self.queue_orders)
+            .activate(candles, prices, &self.get_result(), &self.queue_orders)
     }
 
     /// Get the stats of the agent
@@ -130,6 +130,9 @@ where
             }
         }
 
+        self.activate
+            .on_order(candle.get_start_time(), &order);
+
         Ok(order)
     }
 
@@ -189,6 +192,9 @@ where
                     .push(order.clone());
             }
         }
+
+        self.activate
+            .on_order(candle.get_start_time(), &order);
 
         Ok(order)
     }
@@ -316,7 +322,7 @@ where
     /// Perform a cancel order
     #[instrument(level = "debug", skip(self))]
     fn cancel_order(&mut self, symbol: Symbol, id: Uuid, candle: &C) {
-        let Some(orders) = self.queue_orders.get_mut(&symbol.clone()) else {
+        let Some(orders) = self.queue_orders.get_mut(&symbol) else {
             return;
         };
 
@@ -325,6 +331,9 @@ where
         };
 
         let executed_order = handle_cancel_order!(self, order, candle);
+
+        self.activate
+            .on_order(candle.get_start_time(), &executed_order);
 
         self.executed_orders.push(executed_order);
 
@@ -368,8 +377,6 @@ where
     pub fn on_end_round(&mut self, ts: u64, candles: &[C]) {
         self.min_balance = self.min_balance.min(self.balance);
         self.balance_assets = self.portfolio_fiat.values().sum();
-        self.activate
-            .on_end_round(ts, self.get_result(), candles, &self.executed_orders);
     }
 }
 
@@ -387,6 +394,7 @@ mod tests {
         fn activate(
             &self,
             _candles: &[Candle],
+            _prices: &HashMap<Symbol, f32>,
             _stats: &CalculateResult,
             _active: &HashMap<Symbol, Vec<Order>>,
         ) -> Vec<CalculateCommand> {
