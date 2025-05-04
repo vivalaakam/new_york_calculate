@@ -130,8 +130,7 @@ where
             }
         }
 
-        self.activate
-            .on_order(candle.get_start_time(), &order);
+        self.activate.on_order(candle.get_start_time(), &order);
 
         Ok(order)
     }
@@ -193,8 +192,7 @@ where
             }
         }
 
-        self.activate
-            .on_order(candle.get_start_time(), &order);
+        self.activate.on_order(candle.get_start_time(), &order);
 
         Ok(order)
     }
