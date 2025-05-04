@@ -25,7 +25,7 @@ where
 
         Calculate {
             candles,
-            pointer: 0,
+            pointer: 1,
             agents,
             ts,
         }
@@ -54,24 +54,30 @@ where
     type Item = ();
 
     fn next(&mut self) -> Option<Self::Item> {
+        let prev_ts = self.ts.get(self.pointer - 1)?;
+        let prev_candles = self.candles.get(prev_ts)?;
+
         let ts = self.ts.get(self.pointer)?;
-        let candles = self.candles.get(ts)?;
+        let current_candles = self.candles.get(ts)?;
 
         // Create a symbol-to-candle mapping for O(1) lookups
-        let candle_map: HashMap<_, _> = candles.iter().map(|c| (c.get_symbol(), c)).collect();
+        let candle_map: HashMap<_, _> = prev_candles.iter().map(|c| (c.get_symbol(), c)).collect();
+        let price_map: HashMap<_, _> = current_candles
+            .iter()
+            .map(|c| (c.get_symbol(), c.get_open()))
+            .collect();
 
         for agent in self.agents.iter_mut() {
-            let orders = agent.activate(candles);
+            let orders = agent.activate(prev_candles, &price_map);
             for order in orders {
                 if let Some(&candle) = candle_map.get(&order.get_symbol()) {
                     let _ = agent.perform_order(order, candle);
                 }
             }
 
-            for candle in candles.iter() {
+            for candle in current_candles.iter() {
                 agent.perform_candle(candle);
             }
-            agent.on_end_round(*ts, candles);
         }
 
         self.pointer += 1;
