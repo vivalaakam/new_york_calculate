@@ -8,6 +8,6 @@ pub struct CalculateStats<'a> {
     pub count: f32,
     pub expected: f32,
     pub real: f32,
-    pub assets_stock: &'a HashMap<Symbol, f32>,
-    pub assets_fiat: &'a HashMap<Symbol, f32>,
+    pub assets_available: &'a HashMap<Symbol, f32>,
+    pub assets_frozen: &'a HashMap<Symbol, f32>,
 }

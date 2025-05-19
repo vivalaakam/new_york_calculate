@@ -1,3 +1,4 @@
+use crate::types::TimeStamp;
 use crate::Symbol;
 use uuid::Uuid;
 
@@ -17,13 +18,13 @@ pub enum CalculateCommand {
         symbol: Symbol,
         stake: f32,
         price: f32,
-        expiration: Option<u64>,
+        expiration: Option<TimeStamp>,
     },
     SellLimit {
         symbol: Symbol,
         stake: f32,
         price: f32,
-        expiration: Option<u64>,
+        expiration: Option<TimeStamp>,
     },
     CancelLimit {
         symbol: Symbol,

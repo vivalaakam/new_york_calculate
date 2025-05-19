@@ -5,9 +5,8 @@ use std::collections::HashMap;
 pub struct CalculateResult {
     pub balance: f32,
     pub min_balance: f32,
-    pub balance_assets: f32,
     pub opened_orders: usize,
     pub executed_orders: usize,
-    pub assets_stock: HashMap<Symbol, f32>,
-    pub assets_fiat: HashMap<Symbol, f32>,
+    pub assets_available: HashMap<Symbol, f32>,
+    pub assets_frozen: HashMap<Symbol, f32>,
 }

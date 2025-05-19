@@ -55,7 +55,7 @@ impl Activate<Candle> for &CalculateIterActivate {
     fn activate(
         &self,
         candles: &[Candle],
-        _prices: &HashMap<Symbol, f32>,
+        prices: &HashMap<Symbol, f32>,
         stats: &CalculateResult,
         _active: &HashMap<Symbol, Vec<Order>>,
     ) -> Vec<CalculateCommand> {
@@ -63,13 +63,30 @@ impl Activate<Candle> for &CalculateIterActivate {
         *step += 1;
 
         let mut score = self.score.lock().unwrap();
-        *score = stats.balance + stats.assets_fiat.iter().map(|r| r.1).sum::<f32>();
+        *score = stats.balance
+            + stats
+                .assets_frozen
+                .iter()
+                .map(|r| prices.get(r.0).unwrap_or(&0f32) * r.1)
+                .sum::<f32>()
+            + stats
+                .assets_available
+                .iter()
+                .map(|r| prices.get(r.0).unwrap_or(&0f32) * r.1)
+                .sum::<f32>();
+
+        info!(
+            step = *step,
+            score = *score,
+            balance = stats.balance,
+            assets_frozen = ?stats.assets_frozen,
+            assets_available =  ?stats.assets_available,
+            "score"
+        );
 
         let Some(candle) = candles.last() else {
             return vec![];
         };
-
-        info!("activate {step}: {stats:?} {candles:?}");
 
         match *step % 8u32 {
             0 => {
