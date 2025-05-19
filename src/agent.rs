@@ -6,6 +6,7 @@ use crate::activate::Activate;
 use crate::candle::CandleTrait;
 use crate::order::{Order, OrderSide, OrderStatus, OrderType};
 use crate::symbol::Symbol;
+use crate::types::TimeStamp;
 use crate::{
     handle_buy_executed_order, handle_cancel_order, handle_sell_executed_order, CalculateCommand,
     CalculateResult, CalculateStats,
@@ -20,10 +21,9 @@ mod macros;
 pub struct CalculateAgent<T: Activate<C> + ?Sized, C: CandleTrait> {
     balance: f32,
     commission: f32,
-    balance_assets: f32,
     min_balance: f32,
-    portfolio_stock: HashMap<Symbol, f32>,
-    portfolio_fiat: HashMap<Symbol, f32>,
+    portfolio_available: HashMap<Symbol, f32>,
+    portfolio_frozen: HashMap<Symbol, f32>,
     activate: Box<T>,
     queue_orders: HashMap<Symbol, Vec<Order>>,
     executed_orders: Vec<Order>,
@@ -41,11 +41,10 @@ where
             activate,
             commission,
             min_balance: balance,
-            balance_assets: 0.0,
             executed_orders: Default::default(),
             queue_orders: Default::default(),
-            portfolio_stock: Default::default(),
-            portfolio_fiat: Default::default(),
+            portfolio_available: Default::default(),
+            portfolio_frozen: Default::default(),
             candle: PhantomData,
         }
     }
@@ -61,7 +60,7 @@ where
     #[instrument(level = "debug", skip(self))]
     pub fn get_stats(&self, candle: &C) -> CalculateStats {
         let count = self
-            .portfolio_stock
+            .portfolio_available
             .get(&candle.get_symbol())
             .unwrap_or(&0.0);
         let orders = self
@@ -76,8 +75,8 @@ where
             count: *count,
             expected: 0f32,
             real: count * candle.get_open(),
-            assets_stock: &self.portfolio_stock,
-            assets_fiat: &self.portfolio_fiat,
+            assets_available: &self.portfolio_available,
+            assets_frozen: &self.portfolio_frozen,
         }
     }
 
@@ -143,11 +142,11 @@ where
         price: f32,
         qty: f32,
         order_type: OrderType,
-        expiration: Option<u64>,
+        expiration: Option<TimeStamp>,
         id: Option<Uuid>,
     ) -> Result<Order, CalculateAgentError> {
         let portfolio_amount = self
-            .portfolio_stock
+            .portfolio_available
             .get(&candle.get_symbol())
             .unwrap_or(&0.0);
 
@@ -159,9 +158,15 @@ where
             });
         }
 
-        self.portfolio_stock
+        self.portfolio_available
             .entry(candle.get_symbol())
-            .and_modify(|v| *v -= qty);
+            .and_modify(|v| *v -= qty)
+            .or_insert(0.0);
+
+        self.portfolio_frozen
+            .entry(candle.get_symbol())
+            .and_modify(|v| *v += qty)
+            .or_insert(qty);
 
         let order_sum = qty * price;
 
@@ -183,6 +188,10 @@ where
             OrderType::Market => {
                 let executed_order = handle_sell_executed_order!(self, order, candle);
                 self.executed_orders.push(executed_order);
+
+                self.portfolio_frozen
+                    .entry(candle.get_symbol())
+                    .and_modify(|v| *v -= qty);
             }
             OrderType::Limit => {
                 self.queue_orders
@@ -304,15 +313,10 @@ where
             orders.retain(|o| !executed_ids.contains(&o.id));
         }
 
-        if let Some(order_sum) = self.portfolio_stock.get(&candle.get_symbol()) {
-            self.portfolio_fiat
-                .insert(candle.get_symbol(), order_sum * candle.get_close());
-        }
-
         debug!(
             symbol = candle.get_symbol(),
-            portfolio_stock = ?self.portfolio_stock.get(&candle.get_symbol()),
-            portfolio_fiat = ?self.portfolio_fiat.get(&candle.get_symbol()),
+            portfolio_available = ?self.portfolio_available.get(&candle.get_symbol()),
+            portfolio_frozen = ?self.portfolio_frozen.get(&candle.get_symbol()),
             "perform_candle done"
         );
     }
@@ -358,9 +362,8 @@ where
                 .iter()
                 .fold(0, |acc, (_, v)| acc + v.len()),
             executed_orders: self.executed_orders.len(),
-            balance_assets: self.balance_assets,
-            assets_stock: self.portfolio_stock.clone(),
-            assets_fiat: self.portfolio_fiat.clone(),
+            assets_available: self.portfolio_available.clone(),
+            assets_frozen: self.portfolio_frozen.clone(),
         }
     }
 
@@ -374,7 +377,6 @@ where
     #[instrument(level = "debug", skip(self))]
     pub fn on_end_round(&mut self, ts: u64, candles: &[C]) {
         self.min_balance = self.min_balance.min(self.balance);
-        self.balance_assets = self.portfolio_fiat.values().sum();
     }
 }
 
@@ -436,7 +438,6 @@ mod tests {
         info!(results = ?results, "candle_1");
 
         assert_eq!(results.balance, 499.95);
-        assert_eq!(results.balance_assets, 550.0);
         assert_eq!(results.opened_orders, 0);
         assert_eq!(results.executed_orders, 1);
 
@@ -468,7 +469,6 @@ mod tests {
         info!(results = ?results, "candle_2");
 
         assert_eq!(results.balance, 1099.8899);
-        assert_eq!(results.balance_assets, 0.0);
         assert_eq!(results.opened_orders, 0);
         assert_eq!(results.executed_orders, 2);
     }
@@ -510,7 +510,6 @@ mod tests {
         info!(result = ?agent.get_result(), "candle_1");
 
         assert_eq!(results.balance, 575.0);
-        assert_eq!(results.balance_assets, 0.0);
         assert_eq!(results.opened_orders, 1);
         assert_eq!(results.executed_orders, 0);
 
@@ -532,9 +531,12 @@ mod tests {
         info!(result = ?agent.get_result(), "candle_2" );
 
         assert_eq!(results.balance, 574.9575);
-        assert_eq!(results.balance_assets, 550.0);
         assert_eq!(results.opened_orders, 0);
         assert_eq!(results.executed_orders, 1);
+        assert_eq!(
+            results.assets_available,
+            HashMap::from_iter(vec![(symbol.to_string(), 5.0)])
+        );
 
         let candle_3 = Candle {
             symbol: symbol.clone(),
@@ -566,9 +568,16 @@ mod tests {
         info!(result = ?agent.get_result(), "candle_3");
 
         assert_eq!(results.balance, 574.9575);
-        assert_eq!(results.balance_assets, 0.0);
         assert_eq!(results.opened_orders, 1);
         assert_eq!(results.executed_orders, 1);
+        assert_eq!(
+            results.assets_available,
+            HashMap::from_iter(vec![(symbol.to_string(), 0.0)])
+        );
+        assert_eq!(
+            results.assets_frozen,
+            HashMap::from_iter(vec![(symbol.to_string(), 5.0)])
+        );
 
         let candle_4 = Candle {
             symbol: "BTC".to_string(),
@@ -588,9 +597,16 @@ mod tests {
         info!(result = ?agent.get_result(), "candle_4");
 
         assert_eq!(results.balance, 1249.89);
-        assert_eq!(results.balance_assets, 0.0);
         assert_eq!(results.opened_orders, 0);
         assert_eq!(results.executed_orders, 2);
+        assert_eq!(
+            results.assets_available,
+            HashMap::from_iter(vec![(symbol.to_string(), 0.0)])
+        );
+        assert_eq!(
+            results.assets_frozen,
+            HashMap::from_iter(vec![(symbol.to_string(), 0.0)])
+        );
     }
 
     #[test]
@@ -630,7 +646,6 @@ mod tests {
         info!(result = ?agent.get_result(), "candle_1");
 
         assert_eq!(results.balance, 575.0);
-        assert_eq!(results.balance_assets, 0.0);
         assert_eq!(results.opened_orders, 1);
         assert_eq!(results.executed_orders, 0);
 
@@ -652,7 +667,6 @@ mod tests {
         info!(result = ?agent.get_result(), "candle_2" );
 
         assert_eq!(results.balance, 575.0);
-        assert_eq!(results.balance_assets, 0.0);
         assert_eq!(results.opened_orders, 1);
         assert_eq!(results.executed_orders, 0);
 
@@ -674,7 +688,6 @@ mod tests {
         info!(result = ?agent.get_result(), "candle_3" );
 
         assert_eq!(results.balance, 1000.0);
-        assert_eq!(results.balance_assets, 0.0);
         assert_eq!(results.opened_orders, 0);
         assert_eq!(results.executed_orders, 1);
     }
@@ -726,7 +739,6 @@ mod tests {
         info!(result = ?results, "candle_1");
 
         assert_eq!(results.balance, 499.95);
-        assert_eq!(results.balance_assets, 0.0);
         assert_eq!(results.opened_orders, 1);
         assert_eq!(results.executed_orders, 1);
 
@@ -748,7 +760,6 @@ mod tests {
         info!(result = ?results, "candle_2");
 
         assert_eq!(results.balance, 499.95);
-        assert_eq!(results.balance_assets, 0.0);
         assert_eq!(results.opened_orders, 1);
         assert_eq!(results.executed_orders, 1);
 
@@ -770,7 +781,6 @@ mod tests {
         info!(result = ?agent.get_result(), "candle_3");
 
         assert_eq!(results.balance, 499.95);
-        assert_eq!(results.balance_assets, 550.0);
         assert_eq!(results.opened_orders, 0);
         assert_eq!(results.executed_orders, 2);
     }
@@ -816,7 +826,6 @@ mod tests {
         info!(result = ?agent.get_result(), "candle_1");
 
         assert_eq!(results.balance, 575.0);
-        assert_eq!(results.balance_assets, 0.0);
         assert_eq!(results.opened_orders, 1);
         assert_eq!(results.executed_orders, 0);
 
@@ -838,7 +847,6 @@ mod tests {
         info!(result = ?agent.get_result(), "candle_2" );
 
         assert_eq!(results.balance, 575.0);
-        assert_eq!(results.balance_assets, 0.0);
         assert_eq!(results.opened_orders, 1);
         assert_eq!(results.executed_orders, 0);
 
@@ -870,7 +878,6 @@ mod tests {
         info!(result = ?agent.get_result(), "candle_3" );
 
         assert_eq!(results.balance, 1000.0);
-        assert_eq!(results.balance_assets, 0.0);
         assert_eq!(results.opened_orders, 0);
         assert_eq!(results.executed_orders, 1);
     }
@@ -926,7 +933,6 @@ mod tests {
         info!(result = ?results, "candle_1");
 
         assert_eq!(results.balance, 499.95);
-        assert_eq!(results.balance_assets, 0.0);
         assert_eq!(results.opened_orders, 1);
         assert_eq!(results.executed_orders, 1);
 
@@ -948,7 +954,6 @@ mod tests {
         info!(result = ?results, "candle_2");
 
         assert_eq!(results.balance, 499.95);
-        assert_eq!(results.balance_assets, 0.0);
         assert_eq!(results.opened_orders, 1);
         assert_eq!(results.executed_orders, 1);
 
@@ -982,7 +987,6 @@ mod tests {
         info!(result = ?results, "candle_3");
 
         assert_eq!(results.balance, 499.95);
-        assert_eq!(results.balance_assets, 550.0);
         assert_eq!(results.opened_orders, 0);
         assert_eq!(results.executed_orders, 2);
     }

@@ -1,4 +1,5 @@
 use crate::activate::Activate;
+use crate::types::TimeStamp;
 use crate::{CalculateAgent, CandleTrait};
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -8,9 +9,9 @@ where
     T: Activate<C>,
     C: CandleTrait,
 {
-    candles: &'a HashMap<u64, Vec<C>>,
+    candles: &'a HashMap<TimeStamp, Vec<C>>,
     pointer: usize,
-    ts: Vec<u64>,
+    ts: Vec<TimeStamp>,
     agents: Vec<CalculateAgent<T, C>>,
 }
 
@@ -19,7 +20,7 @@ where
     T: Activate<C>,
     C: CandleTrait + Debug,
 {
-    pub fn new(candles: &'a HashMap<u64, Vec<C>>, agents: Vec<CalculateAgent<T, C>>) -> Self {
+    pub fn new(candles: &'a HashMap<TimeStamp, Vec<C>>, agents: Vec<CalculateAgent<T, C>>) -> Self {
         let mut ts = candles.keys().copied().collect::<Vec<_>>();
         ts.sort();
 

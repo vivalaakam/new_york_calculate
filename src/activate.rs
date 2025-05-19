@@ -1,4 +1,5 @@
 use crate::order::Order;
+use crate::types::TimeStamp;
 use crate::{CalculateCommand, CalculateResult, CandleTrait, Symbol};
 use std::collections::HashMap;
 
@@ -13,7 +14,7 @@ pub trait Activate<C> {
     where
         C: CandleTrait;
 
-    fn on_order(&mut self, _ts: u64, _order: &Order) {}
+    fn on_order(&mut self, _ts: TimeStamp, _order: &Order) {}
 
     fn on_end(&mut self, _result: CalculateResult) {}
 }

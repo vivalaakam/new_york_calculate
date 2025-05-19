@@ -1,7 +1,8 @@
 use crate::symbol::Symbol;
+use crate::types::TimeStamp;
 use uuid::Uuid;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum OrderStatus {
     Open,
     Close,
@@ -14,7 +15,7 @@ pub enum OrderSide {
     Sell,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 pub enum OrderType {
     Market,
     Limit,
@@ -23,8 +24,8 @@ pub enum OrderType {
 #[derive(Debug, Clone)]
 pub struct Order {
     pub symbol: Symbol,
-    pub created_at: u64,
-    pub finished_at: u64,
+    pub created_at: TimeStamp,
+    pub finished_at: TimeStamp,
     pub price: f32,
     pub qty: f32,
     pub commission: f32,
@@ -32,5 +33,5 @@ pub struct Order {
     pub status: OrderStatus,
     pub side: OrderSide,
     pub order_type: OrderType,
-    pub expiration: Option<u64>,
+    pub expiration: Option<TimeStamp>,
 }
