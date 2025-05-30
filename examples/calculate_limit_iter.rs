@@ -2,7 +2,6 @@ use new_york_calculate_core::{
     Activate, Calculate, CalculateAgent, CalculateCommand, CalculateResult, CandleTrait, Order,
     OrderSide, OrderStatus, OrderType, Symbol, TimeStamp,
 };
-use rand::Rng;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Mutex;
