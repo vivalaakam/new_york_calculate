@@ -1,6 +1,4 @@
-use crate::types::TimeStamp;
-use crate::Symbol;
-use uuid::Uuid;
+use crate::types::{OrderId, Symbol, TimeStamp};
 
 #[derive(Clone, Debug)]
 pub enum CalculateCommand {
@@ -28,7 +26,7 @@ pub enum CalculateCommand {
     },
     CancelLimit {
         symbol: Symbol,
-        id: Uuid,
+        id: OrderId,
     },
 }
 

@@ -1,6 +1,4 @@
-use crate::symbol::Symbol;
-use crate::types::TimeStamp;
-use uuid::Uuid;
+use crate::types::{OrderId, Symbol, TimeStamp};
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum OrderStatus {
@@ -29,7 +27,7 @@ pub struct Order {
     pub price: f32,
     pub qty: f32,
     pub commission: f32,
-    pub id: Uuid,
+    pub id: OrderId,
     pub status: OrderStatus,
     pub side: OrderSide,
     pub order_type: OrderType,

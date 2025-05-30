@@ -1,4 +1,4 @@
-use crate::symbol::Symbol;
+use crate::types::Symbol;
 use std::collections::HashMap;
 
 #[derive(Debug)]

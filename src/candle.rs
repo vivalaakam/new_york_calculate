@@ -1,5 +1,4 @@
-use crate::symbol::Symbol;
-use crate::types::TimeStamp;
+use crate::types::{Symbol, TimeStamp};
 
 pub trait CandleTrait {
     fn get_start_time(&self) -> TimeStamp;

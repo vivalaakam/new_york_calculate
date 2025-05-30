@@ -6,7 +6,8 @@ pub use command::CalculateCommand;
 pub use order::{Order, OrderSide, OrderStatus, OrderType};
 pub use result::CalculateResult;
 pub use stats::CalculateStats;
-pub use symbol::Symbol;
+pub use types::OrderId;
+pub use types::Symbol;
 pub use types::TimeStamp;
 
 mod activate;
@@ -17,7 +18,6 @@ mod command;
 mod order;
 mod result;
 mod stats;
-mod symbol;
 #[cfg(test)]
 mod test_utils;
 mod types;

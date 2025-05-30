@@ -5,8 +5,7 @@ use std::marker::PhantomData;
 use crate::activate::Activate;
 use crate::candle::CandleTrait;
 use crate::order::{Order, OrderSide, OrderStatus, OrderType};
-use crate::symbol::Symbol;
-use crate::types::TimeStamp;
+use crate::types::{OrderId, Symbol, TimeStamp};
 use crate::{
     handle_buy_executed_order, handle_cancel_order, handle_sell_executed_order, CalculateCommand,
     CalculateResult, CalculateStats,
@@ -143,7 +142,7 @@ where
         qty: f32,
         order_type: OrderType,
         expiration: Option<TimeStamp>,
-        id: Option<Uuid>,
+        id: Option<OrderId>,
     ) -> Result<Order, CalculateAgentError> {
         let portfolio_amount = self
             .portfolio_available
@@ -323,7 +322,7 @@ where
 
     /// Perform a cancel order
     #[instrument(level = "debug", skip(self))]
-    fn cancel_order(&mut self, symbol: Symbol, id: Uuid, candle: &C) {
+    fn cancel_order(&mut self, symbol: Symbol, id: OrderId, candle: &C) {
         let Some(orders) = self.queue_orders.get_mut(&symbol) else {
             return;
         };
