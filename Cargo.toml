@@ -1,6 +1,6 @@
 [package]
 name = "new_york_calculate_core"
-version = "0.0.66"
+version = "0.0.67"
 authors = ["Andrey Makarov <viva.la.akam@gmail.com>"]
 edition = "2021"
 description = "Library for calculation some things"
@@ -16,7 +16,6 @@ uuid = { version = "1.16", features = ["v4"] }
 tokio = { version = "1.44.1", features = ["rt", "rt-multi-thread", "macros"] }
 
 [dev-dependencies]
-rand = "0.9.1"
 serde_json = "1.0.140"
 
 [lib]
