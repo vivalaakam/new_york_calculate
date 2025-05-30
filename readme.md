@@ -21,7 +21,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-new_york_calculate_core = "0.0.62"
+new_york_calculate_core = "0.0.66"
 ```
 
 ## Usage
