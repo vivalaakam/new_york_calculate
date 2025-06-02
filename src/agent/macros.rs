@@ -13,6 +13,8 @@ macro_rules! handle_sell_executed_order {
         order.status = OrderStatus::Close;
         order.finished_at = $candle.get_start_time();
 
+        $self.activate.on_order($candle.get_start_time(), &order);
+
         debug!(
             balance = $self.balance,
             order = ?order,
@@ -39,6 +41,8 @@ macro_rules! handle_buy_executed_order {
 
         order.status = OrderStatus::Close;
         order.finished_at = $candle.get_start_time();
+
+        $self.activate.on_order($candle.get_start_time(), &order);
 
         order
     }};
@@ -67,6 +71,8 @@ macro_rules! handle_cancel_order {
         }
         order.status = OrderStatus::Cancel;
         order.finished_at = $candle.get_start_time();
+
+        $self.activate.on_order($candle.get_start_time(), &order);
 
         order
     }};

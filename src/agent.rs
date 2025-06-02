@@ -80,7 +80,7 @@ where
     }
 
     /// Buy an order
-    #[instrument(level = "debug", skip(self))]
+    #[instrument(level = "warn", skip(self))]
     pub fn buy_order(
         &mut self,
         candle: &C,
@@ -115,6 +115,8 @@ where
 
         self.balance -= order_sum;
 
+        self.activate.on_order(candle.get_start_time(), &order);
+
         match order_type {
             OrderType::Market => {
                 let executed_order = handle_buy_executed_order!(self, order, candle);
@@ -127,8 +129,6 @@ where
                     .push(order.clone());
             }
         }
-
-        self.activate.on_order(candle.get_start_time(), &order);
 
         Ok(order)
     }
@@ -187,10 +187,6 @@ where
             OrderType::Market => {
                 let executed_order = handle_sell_executed_order!(self, order, candle);
                 self.executed_orders.push(executed_order);
-
-                self.portfolio_frozen
-                    .entry(candle.get_symbol())
-                    .and_modify(|v| *v -= qty);
             }
             OrderType::Limit => {
                 self.queue_orders
@@ -324,17 +320,16 @@ where
     #[instrument(level = "debug", skip(self))]
     fn cancel_order(&mut self, symbol: Symbol, id: OrderId, candle: &C) {
         let Some(orders) = self.queue_orders.get_mut(&symbol) else {
+            debug!(symbol = symbol, "cancel order symbol not found");
             return;
         };
 
         let Some(order) = orders.iter().find(|o| o.id == id) else {
+            debug!(symbol = symbol, id = ?id, "cancel order not found");
             return;
         };
 
         let executed_order = handle_cancel_order!(self, order, candle);
-
-        self.activate
-            .on_order(candle.get_start_time(), &executed_order);
 
         self.executed_orders.push(executed_order);
 

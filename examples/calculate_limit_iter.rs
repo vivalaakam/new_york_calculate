@@ -7,12 +7,11 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 use std::{env, fs};
 use tracing::info;
-use uuid::Uuid;
 
 #[derive(Debug, Default)]
 struct CalculateIterData {
     score: f32,
-    sell_orders: HashMap<TimeStamp, Vec<Uuid>>,
+    sell_orders: HashMap<TimeStamp, Vec<Order>>,
 }
 
 #[derive(Debug, Default)]
@@ -100,22 +99,24 @@ impl Activate<Candle> for &CalculateIterActivate {
 
         for key in exists {
             if let Some(orders) = data.sell_orders.get(key) {
-                for order_id in orders.iter() {
-                    info!(order_id = ?order_id, "cancel order");
+                for order in orders.iter() {
+                    info!(order_id = ?order.id, qty = order.qty, "cancel order");
                     actions.push(CalculateCommand::CancelLimit {
-                        id: *order_id,
+                        id: order.id,
                         symbol: candle.get_symbol(),
                     });
 
                     actions.push(CalculateCommand::SellMarket {
                         symbol: candle.get_symbol(),
-                        stake: 100.0,
+                        stake: order.qty,
                     })
                 }
             }
         }
 
-        if candle.start_time % 1800 == 0 {
+        let price = prices.get(&candle.get_symbol()).unwrap_or(&0.0);
+
+        if candle.start_time % 1800 == 0 && price * 100f32 < stats.balance {
             actions.push(CalculateCommand::BuyMarket {
                 symbol: candle.get_symbol(),
                 stake: 100.0,
@@ -124,7 +125,7 @@ impl Activate<Candle> for &CalculateIterActivate {
             actions.push(CalculateCommand::SellLimit {
                 symbol: candle.get_symbol(),
                 stake: 100.0,
-                price: prices.get(&candle.get_symbol()).unwrap_or(&0.0) * 1.01,
+                price: price * 1.01,
                 expiration: None,
             })
         }
@@ -135,16 +136,16 @@ impl Activate<Candle> for &CalculateIterActivate {
     fn on_order(&mut self, ts: TimeStamp, order: &Order) {
         if order.side == OrderSide::Sell && order.order_type == OrderType::Limit {
             let mut data = self.data.lock().unwrap();
+            info!(ts, order = ?order, "on_order");
 
             if order.status == OrderStatus::Open {
                 data.sell_orders
                     .entry(ts)
                     .or_insert_with(Vec::new)
-                    .push(order.id);
-                info!(ts, order = ?order, "on_order");
+                    .push(order.clone());
             } else {
-                if let Some(orders) = data.sell_orders.get_mut(&ts) {
-                    orders.retain(|&id| id != order.id);
+                if let Some(orders) = data.sell_orders.get_mut(&order.created_at) {
+                    orders.retain(|ord| ord.id != order.id);
                     if orders.is_empty() {
                         data.sell_orders.remove(&ts);
                     }

@@ -37,6 +37,7 @@ impl CalculateCommand {
             CalculateCommand::SellMarket { symbol, .. } => symbol.clone(),
             CalculateCommand::BuyLimit { symbol, .. } => symbol.clone(),
             CalculateCommand::SellLimit { symbol, .. } => symbol.clone(),
+            CalculateCommand::CancelLimit { symbol, .. } => symbol.clone(),
             _ => Symbol::default(),
         }
     }

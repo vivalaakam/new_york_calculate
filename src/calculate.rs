@@ -3,6 +3,7 @@ use crate::types::TimeStamp;
 use crate::{CalculateAgent, CandleTrait};
 use std::collections::HashMap;
 use std::fmt::Debug;
+use tracing::warn;
 
 pub struct Calculate<'a, T, C>
 where
@@ -71,8 +72,14 @@ where
         for agent in self.agents.iter_mut() {
             let orders = agent.activate(prev_candles, &price_map);
             for order in orders {
-                if let Some(&candle) = candle_map.get(&order.get_symbol()) {
-                    let _ = agent.perform_order(order, candle);
+                let candle = candle_map.get(&order.get_symbol());
+
+                if let Some(&candle) = candle {
+                    let result = agent.perform_order(order, candle);
+
+                    if let Err(e) = result {
+                        warn!(error = ?e, "Error performing order");
+                    }
                 }
             }
 
