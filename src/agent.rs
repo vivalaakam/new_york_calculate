@@ -369,7 +369,7 @@ where
 
     /// Action after a round finished
     #[instrument(level = "debug", skip(self))]
-    pub fn on_end_round(&mut self, ts: u64, candles: &[C]) {
+    pub fn on_end_round(&mut self, _ts: u64, _candles: &[C]) {
         self.min_balance = self.min_balance.min(self.balance);
     }
 }
