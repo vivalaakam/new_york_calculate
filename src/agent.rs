@@ -183,6 +183,8 @@ where
             expiration,
         };
 
+        self.activate.on_order(candle.get_start_time(), &order);
+
         match order_type {
             OrderType::Market => {
                 let executed_order = handle_sell_executed_order!(self, order, candle);
@@ -195,8 +197,6 @@ where
                     .push(order.clone());
             }
         }
-
-        self.activate.on_order(candle.get_start_time(), &order);
 
         Ok(order)
     }
@@ -369,7 +369,7 @@ where
 
     /// Action after a round finished
     #[instrument(level = "debug", skip(self))]
-    pub fn on_end_round(&mut self, ts: u64, candles: &[C]) {
+    pub fn on_end_round(&mut self, _ts: u64, _candles: &[C]) {
         self.min_balance = self.min_balance.min(self.balance);
     }
 }
@@ -378,13 +378,19 @@ where
 mod tests {
     use crate::order::Order;
     use crate::test_utils::{init_tracing, Candle};
-    use crate::{Activate, CalculateAgent, CalculateCommand, CalculateResult, Symbol};
+    use crate::{
+        assert_agent_state, Activate, CalculateAgent, CalculateCommand, CalculateResult, Symbol,
+    };
     use std::collections::HashMap;
+    use std::sync::Mutex;
     use tracing::info;
 
-    struct CalculateIterActivate {}
+    #[derive(Debug, Default)]
+    struct CalculateIterActivate {
+        orders: Mutex<Vec<Order>>,
+    }
 
-    impl Activate<Candle> for CalculateIterActivate {
+    impl Activate<Candle> for &CalculateIterActivate {
         fn activate(
             &self,
             _candles: &[Candle],
@@ -394,13 +400,19 @@ mod tests {
         ) -> Vec<CalculateCommand> {
             vec![CalculateCommand::None]
         }
+
+        fn on_order(&mut self, _ts: u64, order: &Order) {
+            self.orders.lock().unwrap().push(order.clone());
+        }
     }
 
     #[test]
     fn test_calculate_agent_market() {
         init_tracing();
 
-        let mut agent = CalculateAgent::new(1000.0, 0.0001, Box::new(CalculateIterActivate {}));
+        let activate = CalculateIterActivate::default();
+
+        let mut agent = CalculateAgent::new(1000.0, 0.0001, Box::new(&activate));
 
         let symbol = "BTC".to_string();
 
@@ -431,9 +443,7 @@ mod tests {
 
         info!(results = ?results, "candle_1");
 
-        assert_eq!(results.balance, 499.95);
-        assert_eq!(results.opened_orders, 0);
-        assert_eq!(results.executed_orders, 1);
+        assert_agent_state!(results, 499.95, 0, 1, activate.orders, 2);
 
         let candle_2 = Candle {
             symbol: symbol.clone(),
@@ -461,16 +471,15 @@ mod tests {
         let results = agent.get_result();
 
         info!(results = ?results, "candle_2");
-
-        assert_eq!(results.balance, 1099.8899);
-        assert_eq!(results.opened_orders, 0);
-        assert_eq!(results.executed_orders, 2);
+        assert_agent_state!(results, 1099.8899, 0, 2, activate.orders, 4);
     }
 
     #[test]
     fn test_calculate_agent_limit() {
         init_tracing();
-        let mut agent = CalculateAgent::new(1000.0, 0.0001, Box::new(CalculateIterActivate {}));
+        let activate = CalculateIterActivate::default();
+
+        let mut agent = CalculateAgent::new(1000.0, 0.0001, Box::new(&activate));
 
         let symbol = "BTC".to_string();
 
@@ -503,9 +512,7 @@ mod tests {
 
         info!(result = ?agent.get_result(), "candle_1");
 
-        assert_eq!(results.balance, 575.0);
-        assert_eq!(results.opened_orders, 1);
-        assert_eq!(results.executed_orders, 0);
+        assert_agent_state!(results, 575.0, 1, 0, activate.orders, 1);
 
         let candle_2 = Candle {
             symbol: "BTC".to_string(),
@@ -524,9 +531,8 @@ mod tests {
 
         info!(result = ?agent.get_result(), "candle_2" );
 
-        assert_eq!(results.balance, 574.9575);
-        assert_eq!(results.opened_orders, 0);
-        assert_eq!(results.executed_orders, 1);
+        assert_agent_state!(results, 574.9575, 0, 1, activate.orders, 2);
+
         assert_eq!(
             results.assets_available,
             HashMap::from_iter(vec![(symbol.to_string(), 5.0)])
@@ -561,9 +567,8 @@ mod tests {
 
         info!(result = ?agent.get_result(), "candle_3");
 
-        assert_eq!(results.balance, 574.9575);
-        assert_eq!(results.opened_orders, 1);
-        assert_eq!(results.executed_orders, 1);
+        assert_agent_state!(results, 574.9575, 1, 1, activate.orders, 3);
+
         assert_eq!(
             results.assets_available,
             HashMap::from_iter(vec![(symbol.to_string(), 0.0)])
@@ -590,9 +595,8 @@ mod tests {
 
         info!(result = ?agent.get_result(), "candle_4");
 
-        assert_eq!(results.balance, 1249.89);
-        assert_eq!(results.opened_orders, 0);
-        assert_eq!(results.executed_orders, 2);
+        assert_agent_state!(results, 1249.89, 0, 2, activate.orders, 4);
+
         assert_eq!(
             results.assets_available,
             HashMap::from_iter(vec![(symbol.to_string(), 0.0)])
@@ -606,7 +610,10 @@ mod tests {
     #[test]
     fn test_calculate_agent_buy_expiration() {
         init_tracing();
-        let mut agent = CalculateAgent::new(1000.0, 0.0001, Box::new(CalculateIterActivate {}));
+
+        let activate = CalculateIterActivate::default();
+
+        let mut agent = CalculateAgent::new(1000.0, 0.0001, Box::new(&activate));
 
         let symbol = "BTC".to_string();
 
@@ -639,9 +646,7 @@ mod tests {
 
         info!(result = ?agent.get_result(), "candle_1");
 
-        assert_eq!(results.balance, 575.0);
-        assert_eq!(results.opened_orders, 1);
-        assert_eq!(results.executed_orders, 0);
+        assert_agent_state!(results, 575.0, 1, 0, activate.orders, 1);
 
         let candle_2 = Candle {
             symbol: "BTC".to_string(),
@@ -660,9 +665,7 @@ mod tests {
 
         info!(result = ?agent.get_result(), "candle_2" );
 
-        assert_eq!(results.balance, 575.0);
-        assert_eq!(results.opened_orders, 1);
-        assert_eq!(results.executed_orders, 0);
+        assert_agent_state!(results, 575.0, 1, 0, activate.orders, 1);
 
         let candle_3 = Candle {
             symbol: symbol.clone(),
@@ -681,15 +684,14 @@ mod tests {
 
         info!(result = ?agent.get_result(), "candle_3" );
 
-        assert_eq!(results.balance, 1000.0);
-        assert_eq!(results.opened_orders, 0);
-        assert_eq!(results.executed_orders, 1);
+        assert_agent_state!(results, 1000.0, 0, 1, activate.orders, 2);
     }
 
     #[test]
     fn test_calculate_agent_sell_expiration() {
         init_tracing();
-        let mut agent = CalculateAgent::new(1000.0, 0.0001, Box::new(CalculateIterActivate {}));
+        let activate = CalculateIterActivate::default();
+        let mut agent = CalculateAgent::new(1000.0, 0.0001, Box::new(&activate));
 
         let symbol = "BTC".to_string();
 
@@ -732,9 +734,7 @@ mod tests {
 
         info!(result = ?results, "candle_1");
 
-        assert_eq!(results.balance, 499.95);
-        assert_eq!(results.opened_orders, 1);
-        assert_eq!(results.executed_orders, 1);
+        assert_agent_state!(results, 499.95, 1, 1, activate.orders, 3);
 
         let candle_2 = Candle {
             symbol: symbol.clone(),
@@ -753,9 +753,7 @@ mod tests {
 
         info!(result = ?results, "candle_2");
 
-        assert_eq!(results.balance, 499.95);
-        assert_eq!(results.opened_orders, 1);
-        assert_eq!(results.executed_orders, 1);
+        assert_agent_state!(results, 499.95, 1, 1, activate.orders, 3);
 
         let candle_3 = Candle {
             symbol: "BTC".to_string(),
@@ -782,7 +780,8 @@ mod tests {
     #[test]
     fn test_calculate_agent_buy_cancel() {
         init_tracing();
-        let mut agent = CalculateAgent::new(1000.0, 0.0001, Box::new(CalculateIterActivate {}));
+        let activate = CalculateIterActivate::default();
+        let mut agent = CalculateAgent::new(1000.0, 0.0001, Box::new(&activate));
 
         let symbol = "BTC".to_string();
 
@@ -840,9 +839,7 @@ mod tests {
 
         info!(result = ?agent.get_result(), "candle_2" );
 
-        assert_eq!(results.balance, 575.0);
-        assert_eq!(results.opened_orders, 1);
-        assert_eq!(results.executed_orders, 0);
+        assert_agent_state!(results, 575.0, 1, 0, activate.orders, 1);
 
         let candle_3 = Candle {
             symbol: symbol.clone(),
@@ -871,15 +868,14 @@ mod tests {
 
         info!(result = ?agent.get_result(), "candle_3" );
 
-        assert_eq!(results.balance, 1000.0);
-        assert_eq!(results.opened_orders, 0);
-        assert_eq!(results.executed_orders, 1);
+        assert_agent_state!(results, 1000.0, 0, 1, activate.orders, 2);
     }
 
     #[test]
     fn test_calculate_agent_sell_cancel() {
         init_tracing();
-        let mut agent = CalculateAgent::new(1000.0, 0.0001, Box::new(CalculateIterActivate {}));
+        let activate = CalculateIterActivate::default();
+        let mut agent = CalculateAgent::new(1000.0, 0.0001, Box::new(&activate));
 
         let symbol = "BTC".to_string();
 
@@ -926,9 +922,7 @@ mod tests {
 
         info!(result = ?results, "candle_1");
 
-        assert_eq!(results.balance, 499.95);
-        assert_eq!(results.opened_orders, 1);
-        assert_eq!(results.executed_orders, 1);
+        assert_agent_state!(results, 499.95, 1, 1, activate.orders, 3);
 
         let candle_2 = Candle {
             symbol: symbol.clone(),
@@ -947,9 +941,7 @@ mod tests {
 
         info!(result = ?results, "candle_2");
 
-        assert_eq!(results.balance, 499.95);
-        assert_eq!(results.opened_orders, 1);
-        assert_eq!(results.executed_orders, 1);
+        assert_agent_state!(results, 499.95, 1, 1, activate.orders, 3);
 
         let candle_3 = Candle {
             symbol: "BTC".to_string(),
@@ -980,8 +972,6 @@ mod tests {
 
         info!(result = ?results, "candle_3");
 
-        assert_eq!(results.balance, 499.95);
-        assert_eq!(results.opened_orders, 0);
-        assert_eq!(results.executed_orders, 2);
+        assert_agent_state!(results, 499.95, 0, 2, activate.orders, 4);
     }
 }
