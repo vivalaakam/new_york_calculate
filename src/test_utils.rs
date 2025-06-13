@@ -50,3 +50,16 @@ impl CandleTrait for Candle {
         self.close
     }
 }
+
+#[macro_export]
+macro_rules! assert_agent_state {
+    ($results:expr, $balance:expr, $opened_orders:expr, $executed_orders:expr, $orders:expr, $orders_len:expr) => {
+        assert_eq!($results.balance, $balance);
+        assert_eq!($results.opened_orders, $opened_orders);
+        assert_eq!($results.executed_orders, $executed_orders);
+
+        let orders = $orders.lock().unwrap();
+        assert_eq!(orders.len(), $orders_len);
+        drop(orders);
+    };
+}
