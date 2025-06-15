@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use crate::activate::Activate;
 use crate::candle::CandleTrait;
 use crate::order::{Order, OrderSide, OrderStatus, OrderType};
-use crate::types::{OrderId, Symbol, TimeStamp};
+use crate::types::{OrderId, Symbol, TimeStamp, UserId};
 use crate::{
     handle_buy_executed_order, handle_cancel_order, handle_sell_executed_order, CalculateCommand,
     CalculateResult, CalculateStats,
@@ -87,8 +87,9 @@ where
         price: f32,
         qty: f32,
         order_type: OrderType,
-        expiration: Option<u64>,
-        id: Option<Uuid>,
+        expiration: Option<TimeStamp>,
+        id: Option<OrderId>,
+        user_id: Option<UserId>,
     ) -> Result<Order, CalculateAgentError> {
         let order_sum = qty * price;
 
@@ -111,6 +112,7 @@ where
             side: OrderSide::Buy,
             order_type,
             expiration,
+            user_id,
         };
 
         self.balance -= order_sum;
@@ -143,6 +145,7 @@ where
         order_type: OrderType,
         expiration: Option<TimeStamp>,
         id: Option<OrderId>,
+        user_id: Option<UserId>,
     ) -> Result<Order, CalculateAgentError> {
         let portfolio_amount = self
             .portfolio_available
@@ -181,6 +184,7 @@ where
             side: OrderSide::Sell,
             order_type,
             expiration,
+            user_id,
         };
 
         self.activate.on_order(candle.get_start_time(), &order);
@@ -209,7 +213,7 @@ where
         candle: &C,
     ) -> Result<Option<Order>, CalculateAgentError> {
         match command {
-            CalculateCommand::BuyMarket { stake, .. } => self
+            CalculateCommand::BuyMarket { stake, user_id, .. } => self
                 .buy_order(
                     candle,
                     candle.get_open(),
@@ -217,9 +221,10 @@ where
                     OrderType::Market,
                     None,
                     Some(Uuid::new_v4()),
+                    user_id,
                 )
                 .map(Some),
-            CalculateCommand::SellMarket { stake, .. } => self
+            CalculateCommand::SellMarket { stake, user_id, .. } => self
                 .sell_order(
                     candle,
                     candle.get_open(),
@@ -227,12 +232,14 @@ where
                     OrderType::Market,
                     None,
                     Some(Uuid::new_v4()),
+                    user_id,
                 )
                 .map(Some),
             CalculateCommand::BuyLimit {
                 stake,
                 price,
                 expiration,
+                user_id,
                 ..
             } => self
                 .buy_order(
@@ -242,12 +249,14 @@ where
                     OrderType::Limit,
                     expiration,
                     Some(Uuid::new_v4()),
+                    user_id,
                 )
                 .map(Some),
             CalculateCommand::SellLimit {
                 stake,
                 price,
                 expiration,
+                user_id,
                 ..
             } => self
                 .sell_order(
@@ -257,6 +266,7 @@ where
                     OrderType::Limit,
                     expiration,
                     Some(Uuid::new_v4()),
+                    user_id,
                 )
                 .map(Some),
             CalculateCommand::None | CalculateCommand::Unknown => Ok(None),
@@ -379,7 +389,8 @@ mod tests {
     use crate::order::Order;
     use crate::test_utils::{init_tracing, Candle};
     use crate::{
-        assert_agent_state, Activate, CalculateAgent, CalculateCommand, CalculateResult, Symbol,
+        assert_agent_state, buy_limit, buy_market, sell_limit, sell_market, Activate,
+        CalculateAgent, CalculateCommand, CalculateResult, Symbol,
     };
     use std::collections::HashMap;
     use std::sync::Mutex;
@@ -425,13 +436,8 @@ mod tests {
             close: 110.0,
         };
 
-        let result = agent.perform_order(
-            CalculateCommand::BuyMarket {
-                symbol: symbol.clone(),
-                stake: 5.0,
-            },
-            &candle_1,
-        );
+        let result =
+            agent.perform_order(buy_market!(symbol, 5.0, user_id = "buy_market"), &candle_1);
 
         assert!(matches!(result, Ok(Some(_))));
 
@@ -455,10 +461,7 @@ mod tests {
         };
 
         let result = agent.perform_order(
-            CalculateCommand::SellMarket {
-                symbol: symbol.clone(),
-                stake: 5.0,
-            },
+            sell_market!(symbol, 5.0, user_id = "sell_market"),
             &candle_2,
         );
 
@@ -493,12 +496,7 @@ mod tests {
         };
 
         let result = agent.perform_order(
-            CalculateCommand::BuyLimit {
-                symbol: symbol.clone(),
-                price: 85.0,
-                stake: 5.0,
-                expiration: None,
-            },
+            buy_limit!(symbol, 5.0, 85.0, user_id = "buy_limit"),
             &candle_1,
         );
 
@@ -548,12 +546,7 @@ mod tests {
         };
 
         let result = agent.perform_order(
-            CalculateCommand::SellLimit {
-                symbol: symbol.clone(),
-                stake: 5.0,
-                price: 135.0,
-                expiration: None,
-            },
+            sell_limit!(symbol, 5.0, 135.0, user_id = "sell_limit"),
             &candle_3,
         );
 
@@ -632,6 +625,7 @@ mod tests {
                 price: 85.0,
                 stake: 5.0,
                 expiration: Some(1),
+                user_id: None,
             },
             &candle_1,
         );
@@ -708,6 +702,7 @@ mod tests {
             CalculateCommand::BuyMarket {
                 symbol: symbol.clone(),
                 stake: 5.0,
+                user_id: None,
             },
             &candle_1,
         );
@@ -720,6 +715,7 @@ mod tests {
                 stake: 5.0,
                 price: 150.0,
                 expiration: Some(1),
+                user_id: None,
             },
             &candle_1,
         );
@@ -800,6 +796,7 @@ mod tests {
                 price: 85.0,
                 stake: 5.0,
                 expiration: None,
+                user_id: None,
             },
             &candle_1,
         );
@@ -892,6 +889,7 @@ mod tests {
             CalculateCommand::BuyMarket {
                 symbol: symbol.clone(),
                 stake: 5.0,
+                user_id: None,
             },
             &candle_1,
         );
@@ -904,6 +902,7 @@ mod tests {
                 stake: 5.0,
                 price: 150.0,
                 expiration: None,
+                user_id: None,
             },
             &candle_1,
         );
