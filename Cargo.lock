@@ -119,7 +119,7 @@ dependencies = [
 
 [[package]]
 name = "new_york_calculate_core"
-version = "0.0.68"
+version = "0.0.69"
 dependencies = [
  "serde_json",
  "thiserror",
