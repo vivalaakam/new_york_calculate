@@ -6,8 +6,8 @@ use serde_json::Value;
 use tracing::info;
 
 use new_york_calculate_core::{
-    Activate, Calculate, CalculateAgent, CalculateCommand, CalculateResult, CandleTrait, Order,
-    Symbol,
+    buy_market, sell_market, Activate, Calculate, CalculateAgent, CalculateCommand,
+    CalculateResult, CandleTrait, Order, Symbol,
 };
 
 #[derive(Debug)]
@@ -91,17 +91,11 @@ impl Activate<Candle> for &CalculateIterActivate {
         match *step % 8u32 {
             0 => {
                 info!("BuyMarket");
-                vec![CalculateCommand::BuyMarket {
-                    symbol: candle.get_symbol(),
-                    stake: 100.0,
-                }]
+                vec![buy_market!(candle.get_symbol(), 100.0)]
             }
             4 => {
                 info!("SellMarket");
-                vec![CalculateCommand::SellMarket {
-                    symbol: candle.get_symbol(),
-                    stake: 100.0,
-                }]
+                vec![sell_market!(candle.get_symbol(), 100.0)]
             }
             _ => vec![CalculateCommand::None],
         }

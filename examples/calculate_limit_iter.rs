@@ -1,6 +1,7 @@
 use new_york_calculate_core::{
-    Activate, Calculate, CalculateAgent, CalculateCommand, CalculateResult, CandleTrait, Order,
-    OrderSide, OrderStatus, OrderType, Symbol, TimeStamp,
+    buy_market, cancel_limit, sell_limit, sell_market, Activate, Calculate, CalculateAgent,
+    CalculateCommand, CalculateResult, CandleTrait, Order, OrderSide, OrderStatus, OrderType,
+    Symbol, TimeStamp,
 };
 use serde_json::Value;
 use std::collections::HashMap;
@@ -101,15 +102,8 @@ impl Activate<Candle> for &CalculateIterActivate {
             if let Some(orders) = data.sell_orders.get(key) {
                 for order in orders.iter() {
                     info!(order_id = ?order.id, qty = order.qty, "cancel order");
-                    actions.push(CalculateCommand::CancelLimit {
-                        id: order.id,
-                        symbol: candle.get_symbol(),
-                    });
-
-                    actions.push(CalculateCommand::SellMarket {
-                        symbol: candle.get_symbol(),
-                        stake: order.qty,
-                    })
+                    actions.push(cancel_limit!(candle.get_symbol(), order.id));
+                    actions.push(sell_market!(candle.get_symbol(), 100.0));
                 }
             }
         }
@@ -117,17 +111,8 @@ impl Activate<Candle> for &CalculateIterActivate {
         let price = prices.get(&candle.get_symbol()).unwrap_or(&0.0);
 
         if candle.start_time % 1800 == 0 && price * 100f32 < stats.balance {
-            actions.push(CalculateCommand::BuyMarket {
-                symbol: candle.get_symbol(),
-                stake: 100.0,
-            });
-
-            actions.push(CalculateCommand::SellLimit {
-                symbol: candle.get_symbol(),
-                stake: 100.0,
-                price: price * 1.01,
-                expiration: None,
-            })
+            actions.push(buy_market!(candle.get_symbol(), 100.0));
+            actions.push(sell_limit!(candle.get_symbol(), 100.0, price * 1.01));
         }
 
         actions
