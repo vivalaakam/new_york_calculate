@@ -80,7 +80,7 @@ where
     }
 
     /// Buy an order
-    #[instrument(level = "warn", skip(self))]
+    #[instrument(level = "debug", skip(self))]
     pub fn buy_order(
         &mut self,
         candle: &C,
