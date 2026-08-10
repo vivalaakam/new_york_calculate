@@ -139,8 +139,11 @@ fn bench_calculate(c: &mut Criterion) {
                         };
                         let mut agent_list = Vec::with_capacity(agents);
                         for _ in 0..agents {
-                            agent_list
-                                .push(CalculateAgent::new(10_000.0, 0.0001, Box::new(&activate)));
+                            agent_list.push(CalculateAgent::new(
+                                10_000.0,
+                                0.0001,
+                                Box::new(&activate),
+                            ));
                         }
                         let mut calc = Calculate::new(&candles, agent_list);
                         let start = Instant::now();
