@@ -7,7 +7,7 @@ use tracing::info;
 
 use new_york_calculate_core::{
     buy_market, sell_market, Activate, Calculate, CalculateAgent, CalculateCommand,
-    CalculateResult, CandleTrait, Order, Symbol,
+    CalculateResultRef, CandleTrait, Order, Symbol,
 };
 
 #[derive(Debug)]
@@ -30,8 +30,8 @@ impl CandleTrait for Candle {
         self.start_time
     }
 
-    fn get_symbol(&self) -> Symbol {
-        "test".to_string()
+    fn get_symbol(&self) -> &str {
+        "test"
     }
 
     fn get_open(&self) -> f32 {
@@ -55,8 +55,8 @@ impl Activate<Candle> for &CalculateIterActivate {
     fn activate(
         &self,
         candles: &[Candle],
-        prices: &HashMap<Symbol, f32>,
-        stats: &CalculateResult,
+        prices: &HashMap<&str, f32>,
+        stats: CalculateResultRef<'_>,
         _active: &HashMap<Symbol, Vec<Order>>,
     ) -> Vec<CalculateCommand> {
         let mut step: std::sync::MutexGuard<'_, u32> = self.step.lock().unwrap();
@@ -67,12 +67,12 @@ impl Activate<Candle> for &CalculateIterActivate {
             + stats
                 .assets_frozen
                 .iter()
-                .map(|r| prices.get(r.0).unwrap_or(&0f32) * r.1)
+                .map(|r| prices.get(r.0.as_str()).unwrap_or(&0f32) * r.1)
                 .sum::<f32>()
             + stats
                 .assets_available
                 .iter()
-                .map(|r| prices.get(r.0).unwrap_or(&0f32) * r.1)
+                .map(|r| prices.get(r.0.as_str()).unwrap_or(&0f32) * r.1)
                 .sum::<f32>();
 
         info!(

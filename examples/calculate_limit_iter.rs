@@ -1,6 +1,6 @@
 use new_york_calculate_core::{
     buy_market, cancel_limit, sell_limit, sell_market, Activate, Calculate, CalculateAgent,
-    CalculateCommand, CalculateResult, CandleTrait, Order, OrderSide, OrderStatus, OrderType,
+    CalculateCommand, CalculateResultRef, CandleTrait, Order, OrderSide, OrderStatus, OrderType,
     Symbol, TimeStamp,
 };
 use serde_json::Value;
@@ -34,8 +34,8 @@ impl CandleTrait for Candle {
         self.start_time
     }
 
-    fn get_symbol(&self) -> Symbol {
-        "test".to_string()
+    fn get_symbol(&self) -> &str {
+        "test"
     }
 
     fn get_open(&self) -> f32 {
@@ -59,8 +59,8 @@ impl Activate<Candle> for &CalculateIterActivate {
     fn activate(
         &self,
         candles: &[Candle],
-        prices: &HashMap<Symbol, f32>,
-        stats: &CalculateResult,
+        prices: &HashMap<&str, f32>,
+        stats: CalculateResultRef<'_>,
         _active: &HashMap<Symbol, Vec<Order>>,
     ) -> Vec<CalculateCommand> {
         let Some(candle) = candles.last() else {
@@ -74,12 +74,12 @@ impl Activate<Candle> for &CalculateIterActivate {
             + stats
                 .assets_frozen
                 .iter()
-                .map(|r| prices.get(r.0).unwrap_or(&0f32) * r.1)
+                .map(|r| prices.get(r.0.as_str()).unwrap_or(&0f32) * r.1)
                 .sum::<f32>()
             + stats
                 .assets_available
                 .iter()
-                .map(|r| prices.get(r.0).unwrap_or(&0f32) * r.1)
+                .map(|r| prices.get(r.0.as_str()).unwrap_or(&0f32) * r.1)
                 .sum::<f32>();
 
         info!(
@@ -94,12 +94,12 @@ impl Activate<Candle> for &CalculateIterActivate {
         let exists = data
             .sell_orders
             .keys()
-            .into_iter()
             .filter(|k| *k + 1200 < candle.get_start_time())
+            .copied()
             .collect::<Vec<_>>();
 
         for key in exists {
-            if let Some(orders) = data.sell_orders.get(key) {
+            if let Some(orders) = data.sell_orders.get(&key) {
                 for order in orders.iter() {
                     info!(order_id = ?order.id, qty = order.qty, "cancel order");
                     actions.push(cancel_limit!(candle.get_symbol(), order.id));
@@ -108,7 +108,7 @@ impl Activate<Candle> for &CalculateIterActivate {
             }
         }
 
-        let price = prices.get(&candle.get_symbol()).unwrap_or(&0.0);
+        let price = prices.get(candle.get_symbol()).unwrap_or(&0.0);
 
         if candle.start_time % 1800 == 0 && price * 100f32 < stats.balance {
             actions.push(buy_market!(candle.get_symbol(), 100.0));
@@ -126,7 +126,7 @@ impl Activate<Candle> for &CalculateIterActivate {
             if order.status == OrderStatus::Open {
                 data.sell_orders
                     .entry(ts)
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(order.clone());
             } else {
                 if let Some(orders) = data.sell_orders.get_mut(&order.created_at) {

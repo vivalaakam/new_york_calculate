@@ -4,7 +4,7 @@ pub use calculate::Calculate;
 pub use candle::CandleTrait;
 pub use command::CalculateCommand;
 pub use order::{Order, OrderSide, OrderStatus, OrderType};
-pub use result::CalculateResult;
+pub use result::{CalculateResult, CalculateResultRef};
 pub use stats::CalculateStats;
 pub use types::OrderId;
 pub use types::Symbol;

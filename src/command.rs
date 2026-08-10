@@ -35,14 +35,14 @@ pub enum CalculateCommand {
 }
 
 impl CalculateCommand {
-    pub fn get_symbol(&self) -> Symbol {
+    pub fn get_symbol(&self) -> &str {
         match self {
-            CalculateCommand::BuyMarket { symbol, .. } => symbol.clone(),
-            CalculateCommand::SellMarket { symbol, .. } => symbol.clone(),
-            CalculateCommand::BuyLimit { symbol, .. } => symbol.clone(),
-            CalculateCommand::SellLimit { symbol, .. } => symbol.clone(),
-            CalculateCommand::CancelLimit { symbol, .. } => symbol.clone(),
-            _ => Symbol::default(),
+            CalculateCommand::BuyMarket { symbol, .. } => symbol,
+            CalculateCommand::SellMarket { symbol, .. } => symbol,
+            CalculateCommand::BuyLimit { symbol, .. } => symbol,
+            CalculateCommand::SellLimit { symbol, .. } => symbol,
+            CalculateCommand::CancelLimit { symbol, .. } => symbol,
+            _ => "",
         }
     }
 }
@@ -51,7 +51,7 @@ impl CalculateCommand {
 macro_rules! buy_market {
     ($symbol:expr, $stake:expr) => {
         CalculateCommand::BuyMarket {
-            symbol: $symbol.clone(),
+            symbol: $symbol.to_owned(),
             stake: $stake,
             user_id: None,
         }
@@ -59,7 +59,7 @@ macro_rules! buy_market {
 
     ($symbol:expr, $stake:expr, user_id = $user_id:expr) => {
         CalculateCommand::BuyMarket {
-            symbol: $symbol.clone(),
+            symbol: $symbol.to_owned(),
             stake: $stake,
             user_id: Some($user_id.to_owned()),
         }
@@ -70,7 +70,7 @@ macro_rules! buy_market {
 macro_rules! sell_market {
     ($symbol:expr, $stake:expr) => {
         CalculateCommand::SellMarket {
-            symbol: $symbol.clone(),
+            symbol: $symbol.to_owned(),
             stake: $stake,
             user_id: None,
         }
@@ -78,7 +78,7 @@ macro_rules! sell_market {
 
     ($symbol:expr, $stake:expr, user_id = $user_id:expr) => {
         CalculateCommand::SellMarket {
-            symbol: $symbol.clone(),
+            symbol: $symbol.to_owned(),
             stake: $stake,
             user_id: Some($user_id.to_owned()),
         }
@@ -89,7 +89,7 @@ macro_rules! sell_market {
 macro_rules! buy_limit {
     ($symbol:expr, $stake:expr, $price:expr) => {
         CalculateCommand::BuyLimit {
-            symbol: $symbol,
+            symbol: $symbol.to_owned(),
             stake: $stake,
             price: $price,
             expiration: None,
@@ -99,7 +99,7 @@ macro_rules! buy_limit {
     // expiration
     ($symbol:expr, $stake:expr, $price:expr, expiration = $expiration:expr) => {
         CalculateCommand::BuyLimit {
-            symbol: $symbol,
+            symbol: $symbol.to_owned(),
             stake: $stake,
             price: $price,
             expiration: Some($expiration),
@@ -109,7 +109,7 @@ macro_rules! buy_limit {
     // user_id
     ($symbol:expr, $stake:expr, $price:expr, user_id = $user_id:expr) => {
         CalculateCommand::BuyLimit {
-            symbol: $symbol.clone(),
+            symbol: $symbol.to_owned(),
             stake: $stake,
             price: $price,
             expiration: None,
@@ -119,7 +119,7 @@ macro_rules! buy_limit {
     // expiration + user_id (в любом порядке)
     ($symbol:expr, $stake:expr, $price:expr, expiration = $expiration:expr, user_id = $user_id:expr) => {
         CalculateCommand::BuyLimit {
-            symbol: $symbol.clone(),
+            symbol: $symbol.to_owned(),
             stake: $stake,
             price: $price,
             expiration: Some($expiration),
@@ -128,7 +128,7 @@ macro_rules! buy_limit {
     };
     ($symbol:expr, $stake:expr, $price:expr, user_id = $user_id:expr, expiration = $expiration:expr) => {
         CalculateCommand::BuyLimit {
-            symbol: $symbol.clone(),
+            symbol: $symbol.to_owned(),
             stake: $stake,
             price: $price,
             expiration: Some($expiration),
@@ -141,7 +141,7 @@ macro_rules! buy_limit {
 macro_rules! sell_limit {
     ($symbol:expr, $stake:expr, $price:expr) => {
         CalculateCommand::SellLimit {
-            symbol: $symbol.clone(),
+            symbol: $symbol.to_owned(),
             stake: $stake,
             price: $price,
             expiration: None,
@@ -151,7 +151,7 @@ macro_rules! sell_limit {
     // expiration
     ($symbol:expr, $stake:expr, $price:expr, expiration = $expiration:expr) => {
         CalculateCommand::SellLimit {
-            symbol: $symbol.clone(),
+            symbol: $symbol.to_owned(),
             stake: $stake,
             price: $price,
             expiration: Some($expiration),
@@ -161,7 +161,7 @@ macro_rules! sell_limit {
     // user_id
     ($symbol:expr, $stake:expr, $price:expr, user_id = $user_id:expr) => {
         CalculateCommand::SellLimit {
-            symbol: $symbol.clone(),
+            symbol: $symbol.to_owned(),
             stake: $stake,
             price: $price,
             expiration: None,
@@ -171,7 +171,7 @@ macro_rules! sell_limit {
     // expiration + user_id (в любом порядке)
     ($symbol:expr, $stake:expr, $price:expr, expiration = $expiration:expr, user_id = $user_id:expr) => {
         CalculateCommand::SellLimit {
-            symbol: $symbol.clone(),
+            symbol: $symbol.to_owned(),
             stake: $stake,
             price: $price,
             expiration: Some($expiration),
@@ -180,7 +180,7 @@ macro_rules! sell_limit {
     };
     ($symbol:expr, $stake:expr, $price:expr, user_id = $user_id:expr, expiration = $expiration:expr) => {
         CalculateCommand::SellLimit {
-            symbol: $symbol.clone(),
+            symbol: $symbol.to_owned(),
             stake: $stake,
             price: $price,
             expiration: Some($expiration),
@@ -193,7 +193,7 @@ macro_rules! sell_limit {
 macro_rules! cancel_limit {
     ($symbol:expr, $id:expr) => {
         CalculateCommand::CancelLimit {
-            symbol: $symbol.clone(),
+            symbol: $symbol.to_owned(),
             id: $id,
         }
     };

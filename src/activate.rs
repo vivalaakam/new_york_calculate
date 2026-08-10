@@ -1,14 +1,15 @@
 use crate::order::Order;
+use crate::result::{CalculateResult, CalculateResultRef};
 use crate::types::TimeStamp;
-use crate::{CalculateCommand, CalculateResult, CandleTrait, Symbol};
+use crate::{CalculateCommand, CandleTrait, Symbol};
 use std::collections::HashMap;
 
 pub trait Activate<C> {
     fn activate(
         &self,
         candles: &[C],
-        prices: &HashMap<Symbol, f32>,
-        results: &CalculateResult,
+        prices: &HashMap<&str, f32>,
+        stats: CalculateResultRef<'_>,
         active: &HashMap<Symbol, Vec<Order>>,
     ) -> Vec<CalculateCommand>
     where

@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
@@ -6,16 +6,12 @@ use crate::activate::Activate;
 use crate::candle::CandleTrait;
 use crate::order::{Order, OrderSide, OrderStatus, OrderType};
 use crate::types::{OrderId, Symbol, TimeStamp, UserId};
-use crate::{
-    handle_buy_executed_order, handle_cancel_order, handle_sell_executed_order, CalculateCommand,
-    CalculateResult, CalculateStats,
-};
+use crate::{CalculateCommand, CalculateResult, CalculateResultRef, CalculateStats};
 use errors::CalculateAgentError;
 use tracing::{debug, instrument};
 use uuid::Uuid;
 
 mod errors;
-mod macros;
 
 pub struct CalculateAgent<T: Activate<C> + ?Sized, C: CandleTrait> {
     balance: f32,
@@ -50,21 +46,22 @@ where
 
     /// Activate the agent
     #[instrument(level = "debug", skip(self))]
-    pub fn activate(&self, candles: &[C], prices: &HashMap<Symbol, f32>) -> Vec<CalculateCommand> {
+    pub fn activate(&self, candles: &[C], prices: &HashMap<&str, f32>) -> Vec<CalculateCommand> {
+        let result = self.get_result_ref();
         self.activate
-            .activate(candles, prices, &self.get_result(), &self.queue_orders)
+            .activate(candles, prices, result, &self.queue_orders)
     }
 
     /// Get the stats of the agent
     #[instrument(level = "debug", skip(self))]
-    pub fn get_stats(&self, candle: &C) -> CalculateStats {
+    pub fn get_stats(&self, candle: &C) -> CalculateStats<'_> {
         let count = self
             .portfolio_available
-            .get(&candle.get_symbol())
+            .get(candle.get_symbol())
             .unwrap_or(&0.0);
         let orders = self
             .queue_orders
-            .get(&candle.get_symbol())
+            .get(candle.get_symbol())
             .unwrap_or(&vec![])
             .len();
 
@@ -80,6 +77,7 @@ where
     }
 
     /// Buy an order
+    #[allow(clippy::too_many_arguments)]
     #[instrument(level = "debug", skip(self))]
     pub fn buy_order(
         &mut self,
@@ -100,12 +98,12 @@ where
             });
         }
 
-        let order = Order {
+        let mut order = Order {
             created_at: candle.get_start_time(),
             finished_at: 0,
             price,
             qty,
-            symbol: candle.get_symbol(),
+            symbol: candle.get_symbol().to_owned(),
             id: id.unwrap_or(Uuid::new_v4()),
             commission: order_sum * self.commission,
             status: OrderStatus::Open,
@@ -121,8 +119,8 @@ where
 
         match order_type {
             OrderType::Market => {
-                let executed_order = handle_buy_executed_order!(self, order, candle);
-                self.executed_orders.push(executed_order);
+                self.execute_buy_order(&mut order, candle);
+                self.executed_orders.push(order.clone());
             }
             OrderType::Limit => {
                 self.queue_orders
@@ -136,6 +134,7 @@ where
     }
 
     /// Sell an order
+    #[allow(clippy::too_many_arguments)]
     #[instrument(level = "debug", skip(self))]
     pub fn sell_order(
         &mut self,
@@ -149,34 +148,34 @@ where
     ) -> Result<Order, CalculateAgentError> {
         let portfolio_amount = self
             .portfolio_available
-            .get(&candle.get_symbol())
+            .get(candle.get_symbol())
             .unwrap_or(&0.0);
 
         if qty > *portfolio_amount {
             return Err(CalculateAgentError::InsufficientAssetBalance {
-                symbol: candle.get_symbol(),
+                symbol: candle.get_symbol().to_owned(),
                 available: *portfolio_amount,
                 required: qty,
             });
         }
 
         self.portfolio_available
-            .entry(candle.get_symbol())
+            .entry(candle.get_symbol().to_owned())
             .and_modify(|v| *v -= qty)
             .or_insert(0.0);
 
         self.portfolio_frozen
-            .entry(candle.get_symbol())
+            .entry(candle.get_symbol().to_owned())
             .and_modify(|v| *v += qty)
             .or_insert(qty);
 
         let order_sum = qty * price;
 
-        let order = Order {
+        let mut order = Order {
             id: id.unwrap_or(Uuid::new_v4()),
             created_at: candle.get_start_time(),
             finished_at: 0,
-            symbol: candle.get_symbol(),
+            symbol: candle.get_symbol().to_owned(),
             price,
             qty,
             commission: order_sum * self.commission,
@@ -191,8 +190,8 @@ where
 
         match order_type {
             OrderType::Market => {
-                let executed_order = handle_sell_executed_order!(self, order, candle);
-                self.executed_orders.push(executed_order);
+                self.execute_sell_order(&mut order, candle);
+                self.executed_orders.push(order.clone());
             }
             OrderType::Limit => {
                 self.queue_orders
@@ -220,7 +219,7 @@ where
                     stake,
                     OrderType::Market,
                     None,
-                    Some(Uuid::new_v4()),
+                    None,
                     user_id,
                 )
                 .map(Some),
@@ -231,7 +230,7 @@ where
                     stake,
                     OrderType::Market,
                     None,
-                    Some(Uuid::new_v4()),
+                    None,
                     user_id,
                 )
                 .map(Some),
@@ -248,7 +247,7 @@ where
                     stake,
                     OrderType::Limit,
                     expiration,
-                    Some(Uuid::new_v4()),
+                    None,
                     user_id,
                 )
                 .map(Some),
@@ -265,7 +264,7 @@ where
                     stake,
                     OrderType::Limit,
                     expiration,
-                    Some(Uuid::new_v4()),
+                    None,
                     user_id,
                 )
                 .map(Some),
@@ -280,48 +279,55 @@ where
     /// Perform a candle
     #[instrument(level = "debug", skip(self))]
     pub fn perform_candle(&mut self, candle: &C) {
-        if let Some(orders) = self.queue_orders.get_mut(&candle.get_symbol()) {
-            let mut executed_ids = HashSet::new();
+        let Some(orders) = self.queue_orders.get_mut(candle.get_symbol()) else {
+            return;
+        };
 
-            for order in orders.iter_mut() {
-                let mut executed_order = match order.side {
-                    OrderSide::Buy => {
-                        if order.price > candle.get_low() {
-                            Some(handle_buy_executed_order!(self, order, candle))
-                        } else {
-                            None
-                        }
-                    }
-                    OrderSide::Sell => {
-                        if order.price < candle.get_high() {
-                            Some(handle_sell_executed_order!(self, order, candle))
-                        } else {
-                            None
-                        }
-                    }
-                };
+        // Pass 1: identify which orders to execute (immutable borrow of orders + candle).
+        let to_execute: Vec<usize> = orders
+            .iter()
+            .enumerate()
+            .filter(|(_, order)| {
+                let buy_hit = order.side == OrderSide::Buy && order.price > candle.get_low();
+                let sell_hit = order.side == OrderSide::Sell && order.price < candle.get_high();
+                let expired = order
+                    .expiration
+                    .is_some_and(|exp| order.created_at + exp < candle.get_start_time());
+                buy_hit || sell_hit || expired
+            })
+            .map(|(i, _)| i)
+            .collect();
 
-                if executed_order.is_none() {
-                    if let Some(expiration) = order.expiration {
-                        if order.created_at + expiration < candle.get_start_time() {
-                            executed_order = Some(handle_cancel_order!(self, order, candle));
-                        }
-                    }
-                }
-
-                if let Some(executed_order) = executed_order {
-                    executed_ids.insert(executed_order.id);
-                    self.executed_orders.push(executed_order);
-                }
-            }
-
-            orders.retain(|o| !executed_ids.contains(&o.id));
+        if to_execute.is_empty() {
+            return;
         }
+
+        // Pass 2: extract executed orders via swap_remove (preserves order in remaining).
+        let mut executed: Vec<Order> = Vec::with_capacity(to_execute.len());
+        for &i in to_execute.iter().rev() {
+            executed.push(orders.swap_remove(i));
+        }
+
+        // Pass 3: process extracted orders with full &mut self access.
+        for order in &mut executed {
+            let buy_hit = order.side == OrderSide::Buy && order.price > candle.get_low();
+            let sell_hit = order.side == OrderSide::Sell && order.price < candle.get_high();
+
+            if buy_hit {
+                self.execute_buy_order(order, candle);
+            } else if sell_hit {
+                self.execute_sell_order(order, candle);
+            } else {
+                self.execute_cancel_order(order, candle);
+            }
+        }
+
+        self.executed_orders.extend(executed);
 
         debug!(
             symbol = candle.get_symbol(),
-            portfolio_available = ?self.portfolio_available.get(&candle.get_symbol()),
-            portfolio_frozen = ?self.portfolio_frozen.get(&candle.get_symbol()),
+            portfolio_available = ?self.portfolio_available.get(candle.get_symbol()),
+            portfolio_frozen = ?self.portfolio_frozen.get(candle.get_symbol()),
             "perform_candle done"
         );
     }
@@ -334,53 +340,114 @@ where
             return;
         };
 
-        let Some(order) = orders.iter().find(|o| o.id == id) else {
+        let Some(idx) = orders.iter().position(|o| o.id == id) else {
             debug!(symbol = symbol, id = ?id, "cancel order not found");
             return;
         };
 
-        let executed_order = handle_cancel_order!(self, order, candle);
-
-        self.executed_orders.push(executed_order);
-
-        orders.retain(|o| o.id != id);
+        // Extract the order at idx, process it, then re-insert.
+        let mut order = orders.swap_remove(idx);
+        self.execute_cancel_order(&mut order, candle);
+        self.executed_orders.push(order);
     }
 
     /// Get the result of the agent
     #[instrument(level = "debug", skip(self))]
     pub fn get_result(&self) -> CalculateResult {
+        CalculateResult::from(self.get_result_ref())
+    }
+
+    /// Get a borrowed view of the agent's state — no cloning.
+    pub fn get_result_ref(&self) -> CalculateResultRef<'_> {
+        let opened_orders = self.queue_orders.values().map(|v| v.len()).sum();
+
         debug!(
             balance = self.balance,
-            queue = self
-                .queue_orders
-                .iter()
-                .fold(0, |acc, (_, v)| acc + v.len()),
+            queue = opened_orders,
             "Agent get result"
         );
 
-        CalculateResult {
+        CalculateResultRef {
             balance: self.balance,
             min_balance: self.min_balance,
-            opened_orders: self
-                .queue_orders
-                .iter()
-                .fold(0, |acc, (_, v)| acc + v.len()),
+            opened_orders,
             executed_orders: self.executed_orders.len(),
-            assets_available: self.portfolio_available.clone(),
-            assets_frozen: self.portfolio_frozen.clone(),
+            assets_available: &self.portfolio_available,
+            assets_frozen: &self.portfolio_frozen,
         }
     }
 
     /// Final action after all rounds finished
     #[instrument(level = "debug", skip(self))]
     pub fn on_end(&mut self) {
-        self.activate.on_end(self.get_result())
+        let result = self.get_result();
+        self.activate.on_end(result)
     }
 
     /// Action after a round finished
     #[instrument(level = "debug", skip(self))]
     pub fn on_end_round(&mut self, _ts: u64, _candles: &[C]) {
         self.min_balance = self.min_balance.min(self.balance);
+    }
+
+    /// Execute a buy order: update balance, portfolio, mark as closed
+    #[instrument(level = "debug", skip(self, order, candle))]
+    fn execute_buy_order(&mut self, order: &mut Order, candle: &C) {
+        self.balance -= order.commission;
+
+        self.portfolio_available
+            .entry(candle.get_symbol().to_owned())
+            .and_modify(|v| *v += order.qty)
+            .or_insert(order.qty);
+
+        order.status = OrderStatus::Close;
+        order.finished_at = candle.get_start_time();
+
+        self.activate.on_order(candle.get_start_time(), order);
+
+        debug!(balance = self.balance, order = ?order, "buy order execution completed");
+    }
+
+    /// Execute a sell order: update balance, portfolio, mark as closed
+    #[instrument(level = "debug", skip(self, order, candle))]
+    fn execute_sell_order(&mut self, order: &mut Order, candle: &C) {
+        self.balance += order.price * order.qty;
+        self.balance -= order.commission;
+
+        self.portfolio_frozen
+            .entry(candle.get_symbol().to_owned())
+            .and_modify(|v| *v -= order.qty);
+
+        order.status = OrderStatus::Close;
+        order.finished_at = candle.get_start_time();
+
+        self.activate.on_order(candle.get_start_time(), order);
+
+        debug!(balance = self.balance, order = ?order, "sell order execution completed");
+    }
+
+    /// Cancel an order: revert balance/portfolio changes, mark as cancelled
+    #[instrument(level = "debug", skip(self, order, candle))]
+    fn execute_cancel_order(&mut self, order: &mut Order, candle: &C) {
+        match order.side {
+            OrderSide::Buy => {
+                self.balance += order.price * order.qty;
+            }
+            OrderSide::Sell => {
+                self.portfolio_available
+                    .entry(candle.get_symbol().to_owned())
+                    .and_modify(|v| *v += order.qty);
+
+                self.portfolio_frozen
+                    .entry(candle.get_symbol().to_owned())
+                    .and_modify(|v| *v -= order.qty);
+            }
+        }
+
+        order.status = OrderStatus::Cancel;
+        order.finished_at = candle.get_start_time();
+
+        self.activate.on_order(candle.get_start_time(), order);
     }
 }
 
@@ -390,7 +457,7 @@ mod tests {
     use crate::test_utils::{init_tracing, Candle};
     use crate::{
         assert_agent_state, buy_limit, buy_market, sell_limit, sell_market, Activate,
-        CalculateAgent, CalculateCommand, CalculateResult, Symbol,
+        CalculateAgent, CalculateCommand, CalculateResultRef, Symbol,
     };
     use std::collections::HashMap;
     use std::sync::Mutex;
@@ -405,8 +472,8 @@ mod tests {
         fn activate(
             &self,
             _candles: &[Candle],
-            _prices: &HashMap<Symbol, f32>,
-            _stats: &CalculateResult,
+            _prices: &HashMap<&str, f32>,
+            _stats: CalculateResultRef<'_>,
             _active: &HashMap<Symbol, Vec<Order>>,
         ) -> Vec<CalculateCommand> {
             vec![CalculateCommand::None]
@@ -443,7 +510,7 @@ mod tests {
 
         agent.perform_candle(&candle_1);
 
-        agent.on_end_round(0, &vec![candle_1]);
+        agent.on_end_round(0, &[candle_1]);
 
         let results = agent.get_result();
 
@@ -469,7 +536,7 @@ mod tests {
 
         agent.perform_candle(&candle_2);
 
-        agent.on_end_round(1, &vec![candle_2]);
+        agent.on_end_round(1, &[candle_2]);
 
         let results = agent.get_result();
 
@@ -504,7 +571,7 @@ mod tests {
 
         agent.perform_candle(&candle_1);
 
-        agent.on_end_round(candle_1.start_time, &vec![candle_1]);
+        agent.on_end_round(candle_1.start_time, &[candle_1]);
 
         let results = agent.get_result();
 
@@ -523,7 +590,7 @@ mod tests {
 
         agent.perform_candle(&candle_2);
 
-        agent.on_end_round(candle_2.start_time, &vec![candle_2]);
+        agent.on_end_round(candle_2.start_time, &[candle_2]);
 
         let results = agent.get_result();
 
@@ -554,7 +621,7 @@ mod tests {
 
         agent.perform_candle(&candle_3);
 
-        agent.on_end_round(candle_3.start_time, &vec![candle_3]);
+        agent.on_end_round(candle_3.start_time, &[candle_3]);
 
         let results = agent.get_result();
 
@@ -582,7 +649,7 @@ mod tests {
 
         agent.perform_candle(&candle_4);
 
-        agent.on_end_round(candle_4.start_time, &vec![candle_4]);
+        agent.on_end_round(candle_4.start_time, &[candle_4]);
 
         let results = agent.get_result();
 
@@ -634,7 +701,7 @@ mod tests {
 
         agent.perform_candle(&candle_1);
 
-        agent.on_end_round(candle_1.start_time, &vec![candle_1]);
+        agent.on_end_round(candle_1.start_time, &[candle_1]);
 
         let results = agent.get_result();
 
@@ -653,7 +720,7 @@ mod tests {
 
         agent.perform_candle(&candle_2);
 
-        agent.on_end_round(candle_2.start_time, &vec![candle_2]);
+        agent.on_end_round(candle_2.start_time, &[candle_2]);
 
         let results = agent.get_result();
 
@@ -672,7 +739,7 @@ mod tests {
 
         agent.perform_candle(&candle_3);
 
-        agent.on_end_round(candle_3.start_time, &vec![candle_3]);
+        agent.on_end_round(candle_3.start_time, &[candle_3]);
 
         let results = agent.get_result();
 
@@ -724,7 +791,7 @@ mod tests {
 
         agent.perform_candle(&candle_1);
 
-        agent.on_end_round(candle_1.start_time, &vec![candle_1]);
+        agent.on_end_round(candle_1.start_time, &[candle_1]);
 
         let results = agent.get_result();
 
@@ -743,7 +810,7 @@ mod tests {
 
         agent.perform_candle(&candle_2);
 
-        agent.on_end_round(candle_2.start_time, &vec![candle_2]);
+        agent.on_end_round(candle_2.start_time, &[candle_2]);
 
         let results = agent.get_result();
 
@@ -762,7 +829,7 @@ mod tests {
 
         agent.perform_candle(&candle_3);
 
-        agent.on_end_round(candle_3.start_time, &vec![candle_3]);
+        agent.on_end_round(candle_3.start_time, &[candle_3]);
 
         let results = agent.get_result();
 
@@ -809,7 +876,7 @@ mod tests {
 
         agent.perform_candle(&candle_1);
 
-        agent.on_end_round(candle_1.start_time, &vec![candle_1]);
+        agent.on_end_round(candle_1.start_time, &[candle_1]);
 
         let results = agent.get_result();
 
@@ -830,7 +897,7 @@ mod tests {
 
         agent.perform_candle(&candle_2);
 
-        agent.on_end_round(candle_2.start_time, &vec![candle_2]);
+        agent.on_end_round(candle_2.start_time, &[candle_2]);
 
         let results = agent.get_result();
 
@@ -859,7 +926,7 @@ mod tests {
 
         agent.perform_candle(&candle_3);
 
-        agent.on_end_round(candle_3.start_time, &vec![candle_3]);
+        agent.on_end_round(candle_3.start_time, &[candle_3]);
 
         let results = agent.get_result();
 
@@ -915,7 +982,7 @@ mod tests {
 
         agent.perform_candle(&candle_1);
 
-        agent.on_end_round(candle_1.start_time, &vec![candle_1]);
+        agent.on_end_round(candle_1.start_time, &[candle_1]);
 
         let results = agent.get_result();
 
@@ -934,7 +1001,7 @@ mod tests {
 
         agent.perform_candle(&candle_2);
 
-        agent.on_end_round(candle_2.start_time, &vec![candle_2]);
+        agent.on_end_round(candle_2.start_time, &[candle_2]);
 
         let results = agent.get_result();
 
@@ -965,7 +1032,7 @@ mod tests {
 
         agent.perform_candle(&candle_3);
 
-        agent.on_end_round(candle_3.start_time, &vec![candle_3]);
+        agent.on_end_round(candle_3.start_time, &[candle_3]);
 
         let results = agent.get_result();
 
