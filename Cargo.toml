@@ -2,21 +2,21 @@
 name = "new_york_calculate_core"
 version = "0.0.71"
 authors = ["Andrey Makarov <viva.la.akam@gmail.com>"]
-edition = "2021"
+edition = "2024"
 description = "Library for calculation some things"
 license = "MIT"
 resolver = "2"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-thiserror = "2.0.12"
-tracing = "0.1.41"
-uuid = { version = "1.16", features = ["v4"] }
-tokio = { version = "1.44.1", features = ["rt", "rt-multi-thread", "macros"] }
+thiserror = "2.0.20"
+tracing = "0.1.44"
+uuid = { version = "1.24", features = ["v4"] }
+tokio = { version = "1.53.1", features = ["rt", "rt-multi-thread", "macros"] }
 
 [dev-dependencies]
-serde_json = "1.0.140"
-tracing-subscriber = "0.3.19"
+serde_json = "1.0.151"
+tracing-subscriber = "0.3.23"
 
 [lib]
 name = "new_york_calculate_core"
