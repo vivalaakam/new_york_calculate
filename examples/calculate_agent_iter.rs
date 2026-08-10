@@ -6,8 +6,8 @@ use serde_json::Value;
 use tracing::info;
 
 use new_york_calculate_core::{
-    buy_market, sell_market, Activate, Calculate, CalculateAgent, CalculateCommand,
-    CalculateResultRef, CandleTrait, Order, Symbol,
+    Activate, Calculate, CalculateAgent, CalculateCommand, CalculateResultRef, CandleTrait, Order,
+    Symbol, buy_market, sell_market,
 };
 
 #[derive(Debug)]
