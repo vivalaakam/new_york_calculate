@@ -63,8 +63,9 @@ where
         let current_candles = self.candles.get(ts)?;
 
         // Create a symbol-to-candle mapping for O(1) lookups
-        let candle_map: HashMap<_, _> = prev_candles.iter().map(|c| (c.get_symbol(), c)).collect();
-        let price_map: HashMap<_, _> = current_candles
+        let candle_map: HashMap<&str, &C> =
+            prev_candles.iter().map(|c| (c.get_symbol(), c)).collect();
+        let price_map: HashMap<&str, f32> = current_candles
             .iter()
             .map(|c| (c.get_symbol(), c.get_open()))
             .collect();
@@ -72,7 +73,7 @@ where
         for agent in self.agents.iter_mut() {
             let orders = agent.activate(prev_candles, &price_map);
             for order in orders {
-                let candle = candle_map.get(&order.get_symbol());
+                let candle = candle_map.get(order.get_symbol());
 
                 if let Some(&candle) = candle {
                     let result = agent.perform_order(order, candle);

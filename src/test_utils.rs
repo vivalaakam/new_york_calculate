@@ -30,8 +30,8 @@ impl CandleTrait for Candle {
         self.start_time
     }
 
-    fn get_symbol(&self) -> Symbol {
-        self.symbol.clone()
+    fn get_symbol(&self) -> &str {
+        &self.symbol
     }
 
     fn get_open(&self) -> f32 {
