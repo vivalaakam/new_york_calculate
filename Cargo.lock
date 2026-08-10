@@ -294,7 +294,7 @@ checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
 
 [[package]]
 name = "new_york_calculate_core"
-version = "0.0.71"
+version = "0.0.72"
 dependencies = [
  "criterion",
  "serde_json",
