@@ -8,10 +8,19 @@ use crate::order::{Order, OrderSide, OrderStatus, OrderType};
 use crate::types::{OrderId, Symbol, TimeStamp, UserId};
 use crate::{CalculateCommand, CalculateResult, CalculateResultRef, CalculateStats};
 use errors::CalculateAgentError;
-use tracing::{debug, instrument};
+use tracing::debug;
+#[cfg(feature = "tracing-instrument")]
+use tracing::instrument;
 use uuid::Uuid;
 
 mod errors;
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+enum OrderAction {
+    Buy,
+    Sell,
+    Cancel,
+}
 
 pub struct CalculateAgent<T: Activate<C> + ?Sized, C: CandleTrait> {
     balance: f32,
@@ -21,6 +30,7 @@ pub struct CalculateAgent<T: Activate<C> + ?Sized, C: CandleTrait> {
     portfolio_frozen: HashMap<Symbol, f32>,
     activate: Box<T>,
     queue_orders: HashMap<Symbol, Vec<Order>>,
+    opened_orders_count: usize,
     executed_orders: Vec<Order>,
     candle: PhantomData<C>,
 }
@@ -38,6 +48,7 @@ where
             min_balance: balance,
             executed_orders: Default::default(),
             queue_orders: Default::default(),
+            opened_orders_count: 0,
             portfolio_available: Default::default(),
             portfolio_frozen: Default::default(),
             candle: PhantomData,
@@ -45,7 +56,10 @@ where
     }
 
     /// Activate the agent
-    #[instrument(level = "debug", skip(self))]
+    #[cfg_attr(
+        feature = "tracing-instrument",
+        instrument(level = "debug", skip(self))
+    )]
     pub fn activate(&self, candles: &[C], prices: &HashMap<&str, f32>) -> Vec<CalculateCommand> {
         let result = self.get_result_ref();
         self.activate
@@ -53,7 +67,10 @@ where
     }
 
     /// Get the stats of the agent
-    #[instrument(level = "debug", skip(self))]
+    #[cfg_attr(
+        feature = "tracing-instrument",
+        instrument(level = "debug", skip(self))
+    )]
     pub fn get_stats(&self, candle: &C) -> CalculateStats<'_> {
         let count = self
             .portfolio_available
@@ -62,8 +79,7 @@ where
         let orders = self
             .queue_orders
             .get(candle.get_symbol())
-            .unwrap_or(&vec![])
-            .len();
+            .map_or(0, |v| v.len());
 
         CalculateStats {
             balance: self.balance,
@@ -78,7 +94,10 @@ where
 
     /// Buy an order
     #[allow(clippy::too_many_arguments)]
-    #[instrument(level = "debug", skip(self))]
+    #[cfg_attr(
+        feature = "tracing-instrument",
+        instrument(level = "debug", skip(self))
+    )]
     pub fn buy_order(
         &mut self,
         candle: &C,
@@ -98,12 +117,13 @@ where
             });
         }
 
+        let symbol = candle.get_symbol().to_owned();
         let mut order = Order {
             created_at: candle.get_start_time(),
             finished_at: 0,
             price,
             qty,
-            symbol: candle.get_symbol().to_owned(),
+            symbol: symbol.clone(),
             id: id.unwrap_or(Uuid::new_v4()),
             commission: order_sum * self.commission,
             status: OrderStatus::Open,
@@ -124,9 +144,10 @@ where
             }
             OrderType::Limit => {
                 self.queue_orders
-                    .entry(order.symbol.clone())
+                    .entry(symbol)
                     .or_default()
                     .push(order.clone());
+                self.opened_orders_count += 1;
             }
         }
 
@@ -135,7 +156,10 @@ where
 
     /// Sell an order
     #[allow(clippy::too_many_arguments)]
-    #[instrument(level = "debug", skip(self))]
+    #[cfg_attr(
+        feature = "tracing-instrument",
+        instrument(level = "debug", skip(self))
+    )]
     pub fn sell_order(
         &mut self,
         candle: &C,
@@ -146,26 +170,25 @@ where
         id: Option<OrderId>,
         user_id: Option<UserId>,
     ) -> Result<Order, CalculateAgentError> {
-        let portfolio_amount = self
-            .portfolio_available
-            .get(candle.get_symbol())
-            .unwrap_or(&0.0);
+        let symbol = candle.get_symbol();
+        let portfolio_amount = self.portfolio_available.get(symbol).unwrap_or(&0.0);
 
         if qty > *portfolio_amount {
             return Err(CalculateAgentError::InsufficientAssetBalance {
-                symbol: candle.get_symbol().to_owned(),
+                symbol: symbol.to_owned(),
                 available: *portfolio_amount,
                 required: qty,
             });
         }
 
+        let symbol = symbol.to_owned();
         self.portfolio_available
-            .entry(candle.get_symbol().to_owned())
+            .entry(symbol.clone())
             .and_modify(|v| *v -= qty)
             .or_insert(0.0);
 
         self.portfolio_frozen
-            .entry(candle.get_symbol().to_owned())
+            .entry(symbol.clone())
             .and_modify(|v| *v += qty)
             .or_insert(qty);
 
@@ -175,7 +198,7 @@ where
             id: id.unwrap_or(Uuid::new_v4()),
             created_at: candle.get_start_time(),
             finished_at: 0,
-            symbol: candle.get_symbol().to_owned(),
+            symbol: symbol.clone(),
             price,
             qty,
             commission: order_sum * self.commission,
@@ -195,9 +218,10 @@ where
             }
             OrderType::Limit => {
                 self.queue_orders
-                    .entry(order.symbol.clone())
+                    .entry(symbol)
                     .or_default()
                     .push(order.clone());
+                self.opened_orders_count += 1;
             }
         }
 
@@ -205,7 +229,10 @@ where
     }
 
     /// Perform an order
-    #[instrument(level = "debug", skip(self))]
+    #[cfg_attr(
+        feature = "tracing-instrument",
+        instrument(level = "debug", skip(self))
+    )]
     pub fn perform_order(
         &mut self,
         command: CalculateCommand,
@@ -277,25 +304,35 @@ where
     }
 
     /// Perform a candle
-    #[instrument(level = "debug", skip(self))]
+    #[cfg_attr(
+        feature = "tracing-instrument",
+        instrument(level = "debug", skip(self))
+    )]
     pub fn perform_candle(&mut self, candle: &C) {
         let Some(orders) = self.queue_orders.get_mut(candle.get_symbol()) else {
             return;
         };
 
         // Pass 1: identify which orders to execute (immutable borrow of orders + candle).
-        let to_execute: Vec<usize> = orders
+        let to_execute: Vec<(usize, OrderAction)> = orders
             .iter()
             .enumerate()
-            .filter(|(_, order)| {
+            .filter_map(|(i, order)| {
                 let buy_hit = order.side == OrderSide::Buy && order.price > candle.get_low();
                 let sell_hit = order.side == OrderSide::Sell && order.price < candle.get_high();
                 let expired = order
                     .expiration
                     .is_some_and(|exp| order.created_at + exp < candle.get_start_time());
-                buy_hit || sell_hit || expired
+                if buy_hit {
+                    Some((i, OrderAction::Buy))
+                } else if sell_hit {
+                    Some((i, OrderAction::Sell))
+                } else if expired {
+                    Some((i, OrderAction::Cancel))
+                } else {
+                    None
+                }
             })
-            .map(|(i, _)| i)
             .collect();
 
         if to_execute.is_empty() {
@@ -303,26 +340,23 @@ where
         }
 
         // Pass 2: extract executed orders via swap_remove (preserves order in remaining).
-        let mut executed: Vec<Order> = Vec::with_capacity(to_execute.len());
-        for &i in to_execute.iter().rev() {
-            executed.push(orders.swap_remove(i));
+        let mut executed: Vec<(OrderAction, Order)> = Vec::with_capacity(to_execute.len());
+        for &(i, action) in to_execute.iter().rev() {
+            executed.push((action, orders.swap_remove(i)));
         }
+        self.opened_orders_count -= to_execute.len();
 
         // Pass 3: process extracted orders with full &mut self access.
-        for order in &mut executed {
-            let buy_hit = order.side == OrderSide::Buy && order.price > candle.get_low();
-            let sell_hit = order.side == OrderSide::Sell && order.price < candle.get_high();
-
-            if buy_hit {
-                self.execute_buy_order(order, candle);
-            } else if sell_hit {
-                self.execute_sell_order(order, candle);
-            } else {
-                self.execute_cancel_order(order, candle);
+        for (action, order) in &mut executed {
+            match action {
+                OrderAction::Buy => self.execute_buy_order(order, candle),
+                OrderAction::Sell => self.execute_sell_order(order, candle),
+                OrderAction::Cancel => self.execute_cancel_order(order, candle),
             }
         }
 
-        self.executed_orders.extend(executed);
+        self.executed_orders
+            .extend(executed.into_iter().map(|(_, order)| order));
 
         debug!(
             symbol = candle.get_symbol(),
@@ -333,7 +367,10 @@ where
     }
 
     /// Perform a cancel order
-    #[instrument(level = "debug", skip(self))]
+    #[cfg_attr(
+        feature = "tracing-instrument",
+        instrument(level = "debug", skip(self))
+    )]
     fn cancel_order(&mut self, symbol: Symbol, id: OrderId, candle: &C) {
         let Some(orders) = self.queue_orders.get_mut(&symbol) else {
             debug!(symbol = symbol, "cancel order symbol not found");
@@ -347,30 +384,32 @@ where
 
         // Extract the order at idx, process it, then re-insert.
         let mut order = orders.swap_remove(idx);
+        self.opened_orders_count -= 1;
         self.execute_cancel_order(&mut order, candle);
         self.executed_orders.push(order);
     }
 
     /// Get the result of the agent
-    #[instrument(level = "debug", skip(self))]
+    #[cfg_attr(
+        feature = "tracing-instrument",
+        instrument(level = "debug", skip(self))
+    )]
     pub fn get_result(&self) -> CalculateResult {
         CalculateResult::from(self.get_result_ref())
     }
 
     /// Get a borrowed view of the agent's state — no cloning.
     pub fn get_result_ref(&self) -> CalculateResultRef<'_> {
-        let opened_orders = self.queue_orders.values().map(|v| v.len()).sum();
-
         debug!(
             balance = self.balance,
-            queue = opened_orders,
+            queue = self.opened_orders_count,
             "Agent get result"
         );
 
         CalculateResultRef {
             balance: self.balance,
             min_balance: self.min_balance,
-            opened_orders,
+            opened_orders: self.opened_orders_count,
             executed_orders: self.executed_orders.len(),
             assets_available: &self.portfolio_available,
             assets_frozen: &self.portfolio_frozen,
@@ -378,25 +417,34 @@ where
     }
 
     /// Final action after all rounds finished
-    #[instrument(level = "debug", skip(self))]
+    #[cfg_attr(
+        feature = "tracing-instrument",
+        instrument(level = "debug", skip(self))
+    )]
     pub fn on_end(&mut self) {
         let result = self.get_result();
         self.activate.on_end(result)
     }
 
     /// Action after a round finished
-    #[instrument(level = "debug", skip(self))]
+    #[cfg_attr(
+        feature = "tracing-instrument",
+        instrument(level = "debug", skip(self))
+    )]
     pub fn on_end_round(&mut self, _ts: u64, _candles: &[C]) {
         self.min_balance = self.min_balance.min(self.balance);
     }
 
     /// Execute a buy order: update balance, portfolio, mark as closed
-    #[instrument(level = "debug", skip(self, order, candle))]
+    #[cfg_attr(
+        feature = "tracing-instrument",
+        instrument(level = "debug", skip(self, order, candle))
+    )]
     fn execute_buy_order(&mut self, order: &mut Order, candle: &C) {
         self.balance -= order.commission;
 
         self.portfolio_available
-            .entry(candle.get_symbol().to_owned())
+            .entry(order.symbol.clone())
             .and_modify(|v| *v += order.qty)
             .or_insert(order.qty);
 
@@ -409,13 +457,16 @@ where
     }
 
     /// Execute a sell order: update balance, portfolio, mark as closed
-    #[instrument(level = "debug", skip(self, order, candle))]
+    #[cfg_attr(
+        feature = "tracing-instrument",
+        instrument(level = "debug", skip(self, order, candle))
+    )]
     fn execute_sell_order(&mut self, order: &mut Order, candle: &C) {
         self.balance += order.price * order.qty;
         self.balance -= order.commission;
 
         self.portfolio_frozen
-            .entry(candle.get_symbol().to_owned())
+            .entry(order.symbol.clone())
             .and_modify(|v| *v -= order.qty);
 
         order.status = OrderStatus::Close;
@@ -427,7 +478,10 @@ where
     }
 
     /// Cancel an order: revert balance/portfolio changes, mark as cancelled
-    #[instrument(level = "debug", skip(self, order, candle))]
+    #[cfg_attr(
+        feature = "tracing-instrument",
+        instrument(level = "debug", skip(self, order, candle))
+    )]
     fn execute_cancel_order(&mut self, order: &mut Order, candle: &C) {
         match order.side {
             OrderSide::Buy => {
@@ -435,11 +489,11 @@ where
             }
             OrderSide::Sell => {
                 self.portfolio_available
-                    .entry(candle.get_symbol().to_owned())
+                    .entry(order.symbol.clone())
                     .and_modify(|v| *v += order.qty);
 
                 self.portfolio_frozen
-                    .entry(candle.get_symbol().to_owned())
+                    .entry(order.symbol.clone())
                     .and_modify(|v| *v -= order.qty);
             }
         }
@@ -454,10 +508,10 @@ where
 #[cfg(test)]
 mod tests {
     use crate::order::Order;
-    use crate::test_utils::{init_tracing, Candle};
+    use crate::test_utils::{Candle, init_tracing};
     use crate::{
-        assert_agent_state, buy_limit, buy_market, sell_limit, sell_market, Activate,
-        CalculateAgent, CalculateCommand, CalculateResultRef, Symbol,
+        Activate, CalculateAgent, CalculateCommand, CalculateResultRef, Symbol, assert_agent_state,
+        buy_limit, buy_market, sell_limit, sell_market,
     };
     use std::collections::HashMap;
     use std::sync::Mutex;
