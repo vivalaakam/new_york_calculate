@@ -124,10 +124,7 @@ impl Activate<Candle> for &CalculateIterActivate {
             info!(ts, order = ?order, "on_order");
 
             if order.status == OrderStatus::Open {
-                data.sell_orders
-                    .entry(ts)
-                    .or_default()
-                    .push(order.clone());
+                data.sell_orders.entry(ts).or_default().push(order.clone());
             } else {
                 if let Some(orders) = data.sell_orders.get_mut(&order.created_at) {
                     orders.retain(|ord| ord.id != order.id);
